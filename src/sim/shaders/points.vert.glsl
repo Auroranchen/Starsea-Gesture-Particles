@@ -27,6 +27,8 @@ varying float vFacing;
 varying float vAge;
 varying float vBurst;
 varying float vHalo;
+varying float vAurora;
+varying float vGlint;
 
 void main() {
   vec4 pos = texture2D(uPositions, ref);
@@ -53,6 +55,13 @@ void main() {
     float cloudBand = 0.5 + 0.5 * sin(vNormal.y * 11.0 + vSeed * 8.0 - uTime * 0.12);
     vCrest = smoothstep(0.68, 0.98, vLat) * 0.72 + cloudBand * 0.18;
   }
+  vAurora = (uScene > 1.5 && uScene < 2.5) ? auroraSel(pos.w) * uAurora : 0.0;
+  // Galaxy forge: ~0.4% of particles flash on/off at random times (glitter).
+  // The star is only a few hundred pixels across, so more would white it out.
+  float glintClock = floor(uTime * 9.0 + hash11(pos.w * 17.3) * 9.0);
+  vGlint = (uScene > 0.5 && uScene < 1.5)
+    ? step(0.996, hash11(pos.w * 53.1 + glintClock)) * uForge
+    : 0.0;
   float size = uPointSize * uPixelRatio * (0.7 + 0.6 * vSeed) * (4.0 / max(-mv.z, 0.1));
 
   // Heart (4) / pulse (5): own sizing, independent of the four original scenes.
@@ -89,6 +98,12 @@ void main() {
     size *= 1.0 + speedBoost * 0.12 + pulseBoost * 0.10;
     size *= 1.0 + vStar * (1.4 + 0.8 * vShape);
   }
+
+  // Forge: body particles grow so neighbours overlap into one solid surface
+  // (at ~1px they read as loose dots); glints swell further into sparkles.
+  size *= mix(1.0, 1.6, uForge) * (1.0 + vGlint * 2.2);
+  // Aurora sparks are a little larger and soft.
+  size *= 1.0 + vAurora * 0.5;
 
   gl_PointSize = max(size, 1.0);
   gl_Position = projectionMatrix * mv;

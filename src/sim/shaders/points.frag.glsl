@@ -30,9 +30,12 @@ varying float vFacing;
 varying float vAge;
 varying float vBurst;
 varying float vHalo;
+varying float vAurora;
+varying float vGlint;
 
 uniform float uRainbow;
 uniform float uBeat;
+uniform float uDensityNorm;
 
 vec3 ramp(float t) {
   return t < 0.5
@@ -89,11 +92,37 @@ void main() {
       float coreDim = mix(1.0, smoothstep(0.0, 0.9, vDist) * 0.75 + 0.25, 1.0 - uRainbow);
       gain = life * (1.0 + flash) * coreDim * (1.0 + uEnergy * 0.6);
     } else {
-      float t = clamp(0.32 + vSpeed * 0.5 * (1.0 + uEnergy) + uBeat * 0.4, 0.0, 1.0);
-      hc = mix(ramp(t), uColorC * 0.55, vHalo);
-      // Heart body dims slightly toward its dense center so it reads as a shell.
-      float shell = 0.7 + 0.3 * smoothstep(0.3, 1.1, vDist);
-      gain = mix((1.0 + 0.7 * uBeat) * shell, 0.75 + 0.25 * vSeed, vHalo);
+      // Heart: deep crimson core → bright carmine surface → hot-pink rim on beat.
+      // shell = 0 at center, 1 at the outer surface of the heart.
+      float shell = smoothstep(0.0, 1.45, vDist);
+      float rim   = smoothstep(0.55, 1.15, shell);
+      float beat  = uBeat;
+
+      // Color: cool dark red core → vivid red mid → bright pink at rim.
+      // ramp maps A(dark bg) → B(vivid red) → C(bright pink) — palette in config.
+      float tBase = clamp(0.18 + shell * 0.62 + beat * 0.22 + vSpeed * 0.12, 0.0, 1.0);
+      hc = ramp(tBase);
+
+      // Rim highlight: hot pink/white glow along the heart silhouette.
+      hc = mix(hc, uColorC * 1.15, rim * (0.45 + 0.55 * beat));
+
+      // Beat flash: whole heart surges toward bright carmine at peak lub.
+      float beatFlash = beat * beat;
+      hc = mix(hc, mix(uColorB * 1.4, vec3(1.0, 0.38, 0.48), 0.55), beatFlash * 0.5);
+
+      // Dark hollow core: center stays dim between beats for depth.
+      float coreDark = (1.0 - shell) * (1.0 - shell) * (1.0 - beat * 0.65);
+      hc *= 1.0 - coreDark * 0.55;
+
+      // Halo (dark-matter rings): cool violet-purple, always subtle.
+      vec3 haloCol = mix(uColorC * 0.38, vec3(0.22, 0.04, 0.55), 0.45);
+      hc = mix(hc, haloCol, vHalo * 0.88);
+
+      gain = mix(
+        (0.82 + 1.05 * beat + 0.35 * rim) * (0.55 + 0.45 * shell),
+        0.52 + 0.28 * vSeed,
+        vHalo
+      );
     }
     hc *= (1.0 + vStar * 1.1) * gain;
     gl_FragColor = vec4(hc, circle * 0.5);
@@ -126,9 +155,21 @@ void main() {
     float filament = 0.5 + 0.5 * sceneBand;
     float cloudDepth = 1.0 - smoothstep(0.25, 2.8, vDist);
     float wisps = smoothstep(0.22, 0.92, filament) * (0.55 + 0.45 * vSeed);
-    col = mix(col, vec3(0.56, 0.3, 1.0), wisps * 0.34);
-    col = mix(col, vec3(0.16, 0.52, 0.92), cloudDepth * (1.0 - wisps) * 0.16);
-    col += vec3(1.0, 0.83, 0.66) * smoothstep(0.88, 1.0, vTwinkle) * vStar * 0.42;
+
+    // Dual-tone filaments: warm amber strands vs cool ice-blue wisps.
+    // High-filament threads glow amber-violet; sparse regions are cold blue.
+    vec3 warmStrand = mix(vec3(0.68, 0.22, 1.0), vec3(1.0, 0.55, 0.18), wisps * wisps);
+    vec3 coolVoid   = mix(vec3(0.04, 0.22, 0.72), vec3(0.12, 0.55, 0.95), cloudDepth);
+    col = mix(col, warmStrand, wisps * 0.46);
+    col = mix(col, coolVoid,  (1.0 - wisps) * cloudDepth * 0.22);
+
+    // Dense inner shell: slight teal tint for depth illusion.
+    col = mix(col, vec3(0.08, 0.38, 0.88), cloudDepth * (1.0 - wisps) * 0.14);
+
+    // Star sparkles: warm white-gold flares on top of filaments.
+    col += vec3(1.0, 0.88, 0.62) * smoothstep(0.86, 1.0, vTwinkle) * vStar * 0.52;
+    // Faint blue micro-sparkles in void regions.
+    col += vec3(0.42, 0.78, 1.0) * smoothstep(0.90, 1.0, vTwinkle) * vStar * (1.0 - wisps) * 0.28;
   } else if (uScene > 1.5 && uScene < 2.5) {
     float longitude = atan(vNormal.z, vNormal.x) * 57.2958;
     float latitude = asin(clamp(vNormal.y, -1.0, 1.0)) * 57.2958;
@@ -156,9 +197,16 @@ void main() {
     float atmosphere = pow(1.0 - clamp(vFacing, 0.0, 1.0), 2.2);
     col += vec3(0.08, 0.38, 0.85) * atmosphere * 0.9;
   } else if (uScene > 2.5) {
+    // Saturn: ring particles get a warm gold-amber gradient, planet core is cooler blue-violet.
     float goldMix = smoothstep(0.2, 0.85, 0.5 + 0.5 * sceneBand);
-    col = mix(col, vec3(0.98, 0.72, 0.36), goldMix * 0.52);
-    col += vec3(1.0, 0.78, 0.42) * smoothstep(0.72, 1.0, vTwinkle) * 0.16;
+    float ringPart = smoothstep(0.88, 1.1, vDist); // ring particles are farther from center
+    // Ring: bright gold → amber; planet: violet-lavender base.
+    vec3 ringCol = mix(vec3(0.96, 0.74, 0.28), vec3(1.0, 0.55, 0.18), goldMix);
+    col = mix(col, ringCol, ringPart * 0.68);
+    col = mix(col, vec3(0.98, 0.72, 0.36), goldMix * (1.0 - ringPart) * 0.38);
+    // Ring glint: random bright gold sparkles on fast-moving ring particles.
+    col += vec3(1.0, 0.88, 0.46) * smoothstep(0.75, 1.0, vTwinkle) * ringPart * 0.22;
+    col += vec3(1.0, 0.78, 0.42) * smoothstep(0.72, 1.0, vTwinkle) * 0.12;
   }
 
   float speedFlash = smoothstep(0.8, 1.8, vSpeed * uSpeedNorm * (1.0 + uEnergy));
@@ -178,6 +226,33 @@ void main() {
   }
 
   col *= 1.0 + vStar * 1.1;
+
+  // Galaxy fist: the fused star. Hot white core fading to gold at the rim,
+  // a slow shimmer, and random glints that flare as 4-point sparkles.
+  if (uForge > 0.001 && uScene > 0.5 && uScene < 1.5) {
+    float rim = smoothstep(0.0, uForgeRadius * 1.05, vDist);
+    vec3 star = mix(vec3(1.0, 0.97, 0.9), vec3(1.0, 0.62, 0.22), rim * rim);
+    float shimmer = 0.85 + 0.15 * sin(uTime * 3.0 + vSeed * 40.0);
+    // Additive blending stacks thousands of points, so keep each one dim.
+    // uDensityNorm = 65536 / particle count keeps total brightness equal
+    // across quality tiers.
+    star *= 0.16 * uDensityNorm * shimmer * (1.0 - 0.45 * rim);
+    float spark = max(crossX, crossY) * 2.6 + circle;
+    star = mix(star, vec3(1.0, 0.95, 0.8) * spark * 0.9, vGlint);
+    col = mix(col, star, uForge);
+    // Galaxy draws ring-shaped sprites; a solid body needs round dots,
+    // and glints use a cross so they read as sparkles.
+    alpha = mix(alpha, mix(circle, max(circle, max(crossX, crossY)), vGlint), uForge);
+  }
+
+  // Ocean fist: aurora curtains, green at the foot rising into magenta tips.
+  if (vAurora > 0.001) {
+    float h = clamp((vDist / uOceanRadius - 1.04) / max(uAuroraHeight, 0.05), 0.0, 1.0);
+    vec3 aur = mix(vec3(0.15, 1.0, 0.45), vec3(0.75, 0.25, 1.0), smoothstep(0.35, 1.0, h));
+    float flicker = 0.7 + 0.3 * sin(uTime * 6.0 + vSeed * 31.0);
+    aur *= flicker * (1.0 - 0.55 * h) * 0.9;
+    col = mix(col, aur, vAurora);
+  }
 
   float alphaBoost = mix(0.88, 1.0, vDepth) * (1.0 + speedFlash * 0.12);
   gl_FragColor = vec4(col, alpha * 0.5 * alphaBoost);
