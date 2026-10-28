@@ -13,6 +13,37 @@ import { Overlay } from './ui/Overlay';
 import { StartScreen } from './ui/StartScreen';
 import { WebcamPanel } from './ui/WebcamPanel';
 
+// 运行期错误可视化：JS 异常与着色器编译/链接错误直接在页面底部显示，
+// 避免"黑屏但没有线索"。正常运行时完全不可见。
+function installErrorReporter(): void {
+  let bar: HTMLDivElement | null = null;
+  const show = (msg: string) => {
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.style.cssText = [
+        'position:fixed', 'left:0', 'right:0', 'bottom:0', 'z-index:99999',
+        'max-height:42vh', 'overflow:auto', 'padding:8px 12px',
+        'background:rgba(38,10,10,.96)', 'color:#ffb4b4',
+        'font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace',
+        'border-top:1px solid #ff5c5c', 'white-space:pre-wrap',
+      ].join(';');
+      document.body.appendChild(bar);
+    }
+    bar.textContent += (bar.textContent ? '\n' : '') + msg;
+  };
+  window.addEventListener('error', (e) => show('Error: ' + (e.message || e.error)));
+  window.addEventListener('unhandledrejection', (e) => {
+    const r = e.reason as { message?: string } | undefined;
+    show('Rejection: ' + (r?.message ?? String(e.reason)));
+  });
+  const original = console.error;
+  console.error = (...args: unknown[]) => {
+    show(args.map((a) => (a instanceof Error ? a.message : String(a))).join(' '));
+    original.apply(console, args as unknown as []);
+  };
+}
+installErrorReporter();
+
 const app = document.getElementById('app')!;
 const canvas = document.getElementById('scene') as HTMLCanvasElement;
 
