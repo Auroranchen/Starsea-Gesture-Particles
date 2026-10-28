@@ -179,20 +179,36 @@ vec3 nebulaForce(vec3 p, float seed) {
   vec3 scaled = d / uNebulaAxis;
   float len = max(length(scaled), 1e-4);
   float angle = atan(scaled.z, scaled.x);
-  float broad = sin(angle * 3.0 - uTime * 0.16 + scaled.y * 1.8 + seed * 6.28);
-  float wisps = sin(angle * 7.0 + scaled.y * 4.2 - uTime * 0.31 + seed * 13.0);
-  float strand = broad * 0.68 + wisps * 0.32;
+
+  // Multi-octave filament banding: coarse pillars + mid-scale wisps + fine tendrils
+  float broad    = sin(angle * 3.0 - uTime * 0.16 + scaled.y * 1.8 + seed * 6.28);
+  float mid      = sin(angle * 5.0 + scaled.y * 3.1 + uTime * 0.22 + seed * 9.14) * 0.55;
+  float wisps    = sin(angle * 7.0 + scaled.y * 4.2 - uTime * 0.31 + seed * 13.0) * 0.35;
+  float tendrils = sin(angle * 11.0 - scaled.y * 6.8 + uTime * 0.43 + seed * 17.3) * 0.18;
+  float strand = broad * 0.52 + mid * 0.24 + wisps * 0.16 + tendrils * 0.08;
+
   float radius = uTargetRadius * radiusFrac * (1.0 + uFilamentStrength * strand);
   vec3 target = uCenter + scaled / len * radius * uNebulaAxis;
+
+  // Primary swirl tangent
   vec3 tangent = vec3(-d.z, 0.0, d.x) / max(length(d.xz), 0.25);
+  // Counter-rotation on the inner shell creates differential rotation (realism)
+  vec3 tangent2 = -tangent;
+  float innerBlend = smoothstep(0.55, 0.1, len);
+
+  // Vertical curl: add a slow spiral-lift component
+  float spiralLift = sin(len * 2.4 - uTime * 0.19 + seed * 4.2) * 0.4;
   vec3 verticalCurl = vec3(
     sin(scaled.y * 2.1 + angle * 2.0 + uTime * 0.12),
-    sin(angle * 3.0 - uTime * 0.18),
+    sin(angle * 3.0 - uTime * 0.18) + spiralLift,
     cos(scaled.y * 2.4 - angle * 2.0 + uTime * 0.12)
   );
+
   float flowFade = smoothstep(0.15, 0.8, len) * (1.0 - smoothstep(2.0, 3.4, len));
   return (target - p) * uStiffness
-    + (tangent * (0.7 + broad * 0.3) + verticalCurl * 0.3) * uNebulaFlow * flowFade;
+    + (tangent * (0.65 + broad * 0.35)
+       + tangent2 * innerBlend * 0.18
+       + verticalCurl * 0.32) * uNebulaFlow * flowFade;
 }
 
 vec3 galaxyForce(vec3 p, vec3 v, float seed) {
@@ -275,17 +291,23 @@ vec3 rotateSaturn(vec3 p, float angle) {
 }
 
 vec3 saturnForce(vec3 p, vec3 v, float seed) {
+  // Work entirely in the tilted-ring local frame: rotate p AND v into local space,
+  // compute forces there, then rotate the result back. This prevents the orbit
+  // velocity component from drifting into the wrong plane when the ring is tilted,
+  // which was the source of the spin instability.
   vec3 local = rotateSaturn(p, -uSaturnTilt);
-  float radius = length(local);
+  vec3 vLocal = rotateSaturn(v, -uSaturnTilt);
   float ringRadius = length(local.xz);
   float role = step(0.34, fract(seed));
-  vec3 f = vec3(0.0);
+  vec3 localForce = vec3(0.0);
 
   if (role < 0.5) {
+    // Planet core: pull toward oblate sphere surface
     vec3 target = normalize(local) * uPlanetRadius;
     target.y *= uPlanetFlatten;
-    vec3 localForce = (target - local) * uCoreStiffness;
-    f = rotateSaturn(localForce, uSaturnTilt);
+    localForce = (target - local) * uCoreStiffness;
+    // Damp vertical oscillation explicitly so the core stays stable under rotation
+    localForce.y -= vLocal.y * 2.8;
   } else {
     float gapBias = step(uCassiniGapStart, ringRadius) * step(ringRadius, uCassiniGapEnd);
     float targetRadius = clamp(ringRadius, uInnerRingRadius, uOuterRingRadius);
@@ -294,19 +316,22 @@ vec3 saturnForce(vec3 p, vec3 v, float seed) {
         ? uCassiniGapStart - 0.035
         : uCassiniGapEnd + 0.035;
     }
-    vec3 radial = ringRadius > 1e-4 ? vec3(local.xz / ringRadius, 0.0) : vec3(1.0, 0.0, 0.0);
-    vec3 tangent = vec3(-radial.z, 0.0, radial.x);
-    vec3 target = vec3(radial.x * targetRadius, 0.0, radial.z * targetRadius);
-    target.y += snoise(vec3(local.xz * 1.7, uTime * 0.2)) * uRingVerticalSpread * 0.08;
-    vec3 localForce = (target - local) * uRingStiffness;
-    localForce.y += -local.y * uRingPlaneStrength;
+    vec2 radialXZ = ringRadius > 1e-4 ? local.xz / ringRadius : vec2(1.0, 0.0);
+    vec2 tangentXZ = vec2(-radialXZ.y, radialXZ.x);
+    vec3 target = vec3(radialXZ.x * targetRadius, 0.0, radialXZ.y * targetRadius);
+    // Tiny vertical texture, much gentler than before (was causing height run-away)
+    target.y += snoise(vec3(local.xz * 1.7, uTime * 0.2)) * uRingVerticalSpread * 0.03;
+    localForce = (target - local) * uRingStiffness;
+    // Strong vertical restore to keep ring planar even while rotating fast
+    localForce.y += -local.y * uRingPlaneStrength - vLocal.y * 4.2;
+    // Orbit drive: compare local-frame tangential velocity only
     float orbit = uSaturnOrbitSpeed * pow(max(targetRadius, 0.25), -uSaturnKepler);
-    localForce.xz += (tangent.xz * orbit - v.xz) * uSaturnOrbitGain;
-    localForce += curlNoise(local * 1.6 + uTime * 0.08) * uRingTurbulence;
+    localForce.xz += (tangentXZ * orbit - vLocal.xz) * uSaturnOrbitGain;
+    // Curl turbulence scaled down so it cannot destabilise the orbit
+    localForce += curlNoise(local * 1.6 + uTime * 0.08) * uRingTurbulence * 0.55;
     localForce *= mix(1.0, 0.55, uSaturnCollapse);
-    f = rotateSaturn(localForce, uSaturnTilt);
   }
-  return f;
+  return rotateSaturn(localForce, uSaturnTilt);
 }
 
 // Point on a puffy 3D heart. Area-uniform rejection sampling of the implicit
@@ -398,6 +423,36 @@ vec3 pulseForce(vec3 p, vec3 v, float age) {
   return f;
 }
 
+// Galaxy fist ("star forge"): every particle spirals inward to a fixed slot
+// inside a solid ball (cube-root radius = uniform volume fill) and is held
+// there stiffly, so the scattered disc fuses into one dense glowing body.
+vec3 forgeForce(vec3 p, vec3 v, float seed) {
+  float u = hash11(seed * 3.91) * 2.0 - 1.0;
+  float a = hash11(seed * 8.17) * 6.2831853;
+  float s = sqrt(1.0 - u * u);
+  vec3 dir = vec3(s * cos(a), u, s * sin(a));
+  vec3 target = dir * uForgeRadius * pow(hash11(seed * 1.37), 0.3333);
+  vec3 d = target - p;
+  float dist = length(d);
+  // Spiral in: pull plus a swirl that fades as the particle reaches its slot.
+  vec3 swirl = vec3(-p.z, 0.0, p.x) * 1.6 * smoothstep(0.05, 1.5, dist);
+  return d * 9.0 + swirl - v * 3.2;
+}
+
+// Ocean fist ("aurora storm"): a share of particles lifts off the globe into
+// polar aurora curtains — rippling vertical sheets that circle both poles.
+vec3 auroraForce(vec3 p, vec3 v, float seed) {
+  float hemi = hash11(seed * 2.63) > 0.5 ? 1.0 : -1.0;
+  float lon = hash11(seed * 6.91) * 6.2831853 + uTime * 0.12 * hemi;
+  // Curtain foot follows a wavy oval around the pole.
+  float colat = 0.42 + 0.07 * sin(lon * 3.0 + uTime * 0.7) + 0.03 * sin(lon * 7.0 - uTime * 1.3);
+  float h = pow(hash11(seed * 4.47), 0.7);
+  float lift = 1.0 + 0.04 + h * uAuroraHeight * (0.75 + 0.25 * sin(lon * 5.0 + uTime));
+  vec3 n = vec3(sin(colat) * cos(lon), hemi * cos(colat), sin(colat) * sin(lon));
+  vec3 target = n * uOceanRadius * lift;
+  return (target - p) * 4.5 - v * 1.8;
+}
+
 vec3 capsuleForce(vec3 p, vec3 a, vec3 b, float strength, vec3 push) {
   vec3 ab = b - a;
   float t = clamp(dot(p - a, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
@@ -445,8 +500,15 @@ void main() {
 
   vec3 f;
   if (uScene < 0.5) f = nebulaForce(p, seed);
-  else if (uScene < 1.5) f = galaxyForce(p, v, seed);
-  else if (uScene < 2.5) f = oceanForce(p, v);
+  else if (uScene < 1.5) {
+    f = galaxyForce(p, v, seed);
+    if (uForge > 0.001) f = mix(f, forgeForce(p, v, seed), uForge);
+  }
+  else if (uScene < 2.5) {
+    f = oceanForce(p, v);
+    float aur = uAurora * auroraSel(seed);
+    if (aur > 0.001) f = mix(f, auroraForce(p, v, seed), aur);
+  }
   else if (uScene < 3.5) f = saturnForce(p, v, seed);
   else if (uScene < 4.5) f = heartForce(p, v, seed);
   else {
