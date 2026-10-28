@@ -58,8 +58,8 @@ export const CONFIG = {
       intense: ['#24103b', '#c084fc', '#ffe4a3'] as [string, string, string],
     },
     heart: {
-      calm: ['#2a0418', '#ff2d6f', '#ffc2d9'] as [string, string, string],
-      intense: ['#1c0636', '#b026ff', '#ff7ae0'] as [string, string, string],
+      calm: ['#1a0208', '#e8153a', '#ff8aaa'] as [string, string, string],
+      intense: ['#1c0108', '#ff2020', '#ffb0c0'] as [string, string, string],
     },
     pulse: {
       calm: ['#1a0a02', '#ffb347', '#5ad8ff'] as [string, string, string],
@@ -68,8 +68,8 @@ export const CONFIG = {
   },
   sceneDialNames: {
     nebula: ['cloud', 'ball'] as [string, string],
-    galaxy: ['galaxy', 'collapse'] as [string, string],
-    ocean: ['calm', 'storm'] as [string, string],
+    galaxy: ['galaxy', 'star forge'] as [string, string],
+    ocean: ['calm', 'aurora'] as [string, string],
     saturn: ['orbit', 'rings'] as [string, string],
     heart: ['heartbeat', 'dark core'] as [string, string],
     pulse: ['fireworks', 'ion pulse'] as [string, string],
@@ -79,7 +79,7 @@ export const CONFIG = {
     galaxy: ['#9c58ff', '#ffad4d'] as [string, string],
     ocean: ['#39b9ee', '#8ce5b4'] as [string, string],
     saturn: ['#a970ff', '#ffd36b'] as [string, string],
-    heart: ['#ff4f86', '#c46bff'] as [string, string],
+    heart: ['#ff3355', '#ff8090'] as [string, string],
     pulse: ['#ffb347', '#6fb4ff'] as [string, string],
   },
 
@@ -105,6 +105,9 @@ export const CONFIG = {
     coreColor: '#fff3e8',
     sunRadius: 0.30,
     holeRadius: 0.47,
+    // Fist = "star forge": the disc spirals in and fuses into a solid,
+    // glittering sphere of this radius.
+    forgeRadius: 0.85,
   },
 
   nebula: {
@@ -129,6 +132,11 @@ export const CONFIG = {
     horizontalFlow: 0.22,
     verticalTurbulenceScale: 0.28,
     foamThreshold: 0.53,
+    // Fist = aurora storm: this share of surface particles lifts into polar
+    // aurora curtains reaching auroraHeight above the globe.
+    auroraFraction: 0.22,
+    auroraHeight: 0.55,
+    auroraSmoothing: 2.5,
   },
 
   saturn: {
