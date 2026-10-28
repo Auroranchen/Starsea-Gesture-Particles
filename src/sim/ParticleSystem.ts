@@ -39,6 +39,8 @@ export class ParticleSystem {
     uAuroraFraction: { value: CONFIG.ocean.auroraFraction },
     uAuroraHeight: { value: CONFIG.ocean.auroraHeight },
     uOceanRadius: { value: CONFIG.ocean.containRadius },
+    // 双手控制专属视觉开关（1 = 开，0 = 力场碰撞模式，效果全部失效）
+    uFx: { value: 0 },
   };
 
   constructor(renderer: THREE.WebGLRenderer, size: number, scene: SceneId) {

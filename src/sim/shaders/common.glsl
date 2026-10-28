@@ -11,6 +11,10 @@ uniform float uAuroraFraction;
 uniform float uAuroraHeight;
 uniform float uOceanRadius;
 
+// 1 in 双手控制 (dials), 0 in 力场碰撞 (collider). Every dial-only visual
+// effect multiplies by this, so the collider view stays pixel-identical.
+uniform float uFx;
+
 // 1 for the share of ocean particles that become aurora, else 0.
 float auroraSel(float seed) { return step(fract(sin(seed * 5.71) * 43758.5453123), uAuroraFraction); }
 

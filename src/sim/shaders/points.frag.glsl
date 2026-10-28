@@ -125,7 +125,13 @@ void main() {
       );
     }
     hc *= (1.0 + vStar * 1.1) * gain;
-    gl_FragColor = vec4(hc, circle * 0.5);
+    // 双手控制：深度雾——远处压暗、近处提亮，拉开前后层次。
+    // uFx = 0（力场碰撞）时两个系数恒为 1，观感与改动前完全一致。
+    float fogT = smoothstep(0.12, 0.92, vDepth);
+    float fogCol = mix(1.0, mix(0.70, 1.12, fogT), uFx);
+    float fogAlpha = mix(1.0, mix(0.80, 1.0, fogT), uFx);
+    hc *= fogCol;
+    gl_FragColor = vec4(hc, circle * 0.5 * fogAlpha);
     return;
   }
   float crossX = exp(-abs(c.x) * 18.0) * (1.0 - smoothstep(0.0, 0.52, abs(c.y)));
@@ -212,6 +218,12 @@ void main() {
   float speedFlash = smoothstep(0.8, 1.8, vSpeed * uSpeedNorm * (1.0 + uEnergy));
   col = mix(col, vec3(1.0), speedFlash * 0.32);
   col *= density * twinkle * depthLight;
+
+  // 双手控制：深度雾——远处压暗、近处提亮，把前后层次拉开。
+  // uFx = 0（力场碰撞）时两个系数恒为 1，观感与改动前完全一致。
+  float fogT = smoothstep(0.12, 0.92, vDepth);
+  col *= mix(1.0, mix(0.70, 1.12, fogT), uFx);
+  alpha *= mix(1.0, mix(0.80, 1.0, fogT), uFx);
 
   col = mix(col, uCoreColor, uCoreGlow * (1.0 - smoothstep(0.0, 1.1, vDist)));
 

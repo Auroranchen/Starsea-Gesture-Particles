@@ -93,6 +93,8 @@ export class StateMachine {
     const d = this.dial;
 
     velUniforms.uScene.value = SCENE_INDEX[this.scene];
+    // 双手控制模式专用视觉效果的开关；力场碰撞模式保持原始观感
+    velUniforms.uFx.value = frame.mode === 'dials' ? 1 : 0;
     if (this.scene !== 'heart') this.beat = 0;
 
     const ek = Math.min(dt * CONFIG.energySmoothing, 1);
