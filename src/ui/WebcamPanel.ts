@@ -9,6 +9,8 @@ const CONNECTIONS: Array<[number, number]> = [
   [0, 17],
 ];
 
+type HandSnapshot = ReturnType<HandTracker['poll']>['left'];
+
 export class WebcamPanel {
   readonly element: HTMLDivElement;
   visible = false;
@@ -58,26 +60,46 @@ export class WebcamPanel {
     if (tracker.video.readyState >= 2) ctx.drawImage(tracker.video, 0, 0, w, h);
     ctx.restore();
 
-    for (const lm of tracker.landmarks) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      for (const [a, b] of CONNECTIONS) {
-        ctx.moveTo((1 - lm[a].x) * w, lm[a].y * h);
-        ctx.lineTo((1 - lm[b].x) * w, lm[b].y * h);
-      }
-      ctx.stroke();
-      ctx.fillStyle = '#17c3ff';
-      for (const p of lm) {
+    const { left, right } = tracker.poll();
+    const visibleHands = [left, right].some((hand) => hand && hand.opacity > 0.05);
+
+    if (visibleHands) {
+      for (const lm of tracker.landmarks) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc((1 - p.x) * w, p.y * h, 3.5, 0, Math.PI * 2);
-        ctx.fill();
+        for (const [a, b] of CONNECTIONS) {
+          ctx.moveTo((1 - lm[a].x) * w, lm[a].y * h);
+          ctx.lineTo((1 - lm[b].x) * w, lm[b].y * h);
+        }
+        ctx.stroke();
+        ctx.fillStyle = '#17c3ff';
+        for (const p of lm) {
+          ctx.beginPath();
+          ctx.arc((1 - p.x) * w, p.y * h, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
     }
 
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
     ctx.font = '13px ui-monospace, monospace';
     ctx.textAlign = 'left';
-    ctx.fillText(`detect ${tracker.detectionFps.toFixed(0)} hz`, 12, h - 12);
+    ctx.fillText(`detect ${tracker.detectionFps.toFixed(0)} hz`, 12, h - 30);
+    ctx.fillText(`L ${handStatus(left)}  /  R ${handStatus(right)}`, 12, h - 12);
+    if (!visibleHands) {
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(255,255,255,0.48)';
+      ctx.fillText('tracking lost', w / 2, h / 2);
+    }
   }
+}
+
+function handStatus(hand: HandSnapshot): string {
+  if (!hand) return 'lost';
+  if (hand.pinch >= 0.72) return 'pinch';
+  if (hand.closedness >= 0.72 && hand.spread < 0.58) return 'fist';
+  if (hand.closedness <= 0.28 && hand.spread >= 0.42) return 'open';
+  if (hand.indexExtended) return 'point';
+  return 'neutral';
 }

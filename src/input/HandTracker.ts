@@ -26,6 +26,9 @@ interface TrackedHand {
   speed: number;
   closedness: number;
   spread: number;
+  pinch: number;
+  confidence: number;
+  indexExtended: boolean;
   lastSeen: number;
   baselineScale: number | null;
 }
@@ -61,6 +64,9 @@ export class HandTracker {
       speed: 0,
       closedness: 0,
       spread: 0.5,
+      pinch: 0,
+      confidence: 0,
+      indexExtended: false,
       lastSeen: 0,
       baselineScale: null,
     };
@@ -69,31 +75,36 @@ export class HandTracker {
   static async create(camera: THREE.PerspectiveCamera): Promise<HandTracker> {
     const tracker = new HandTracker(camera);
 
-    tracker.stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: 640, height: 480, facingMode: 'user' },
-      audio: false,
-    });
-    tracker.video.srcObject = tracker.stream;
-    await tracker.video.play();
-
-    const vision = await import('@mediapipe/tasks-vision');
-    const fileset = await vision.FilesetResolver.forVisionTasks(WASM_CDN);
     try {
-      tracker.landmarker = await vision.HandLandmarker.createFromOptions(fileset, {
-        baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
-        runningMode: 'VIDEO',
-        numHands: 2,
+      tracker.stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 640, height: 480, facingMode: 'user' },
+        audio: false,
       });
-    } catch {
-      tracker.landmarker = await vision.HandLandmarker.createFromOptions(fileset, {
-        baseOptions: { modelAssetPath: MODEL_URL, delegate: 'CPU' },
-        runningMode: 'VIDEO',
-        numHands: 2,
-      });
-    }
+      tracker.video.srcObject = tracker.stream;
+      await tracker.video.play();
 
-    tracker.startLoop();
-    return tracker;
+      const vision = await import('@mediapipe/tasks-vision');
+      const fileset = await vision.FilesetResolver.forVisionTasks(WASM_CDN);
+      try {
+        tracker.landmarker = await vision.HandLandmarker.createFromOptions(fileset, {
+          baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
+          runningMode: 'VIDEO',
+          numHands: 2,
+        });
+      } catch {
+        tracker.landmarker = await vision.HandLandmarker.createFromOptions(fileset, {
+          baseOptions: { modelAssetPath: MODEL_URL, delegate: 'CPU' },
+          runningMode: 'VIDEO',
+          numHands: 2,
+        });
+      }
+
+      tracker.startLoop();
+      return tracker;
+    } catch (error) {
+      tracker.dispose();
+      throw error;
+    }
   }
 
   private startLoop(): void {
@@ -114,7 +125,6 @@ export class HandTracker {
     if (this.lastDetect > 0) {
       this.detectionFps = this.detectionFps * 0.9 + (1000 / (now - this.lastDetect)) * 0.1;
     }
-    this.lastDetect = now;
     this.landmarks = result.landmarks ?? [];
 
     const assigned = new Map<Handedness, { lm: NormalizedLandmark[]; score: number }>();
@@ -138,15 +148,22 @@ export class HandTracker {
       }
     }
 
+    this.landmarks = [...assigned.values()].map(({ lm }) => lm);
     for (const [label, det] of assigned) {
-      this.updateHand(this.hands[label], det.lm, now);
+      this.updateHand(this.hands[label], det.lm, det.score, now);
     }
   }
 
-  private updateHand(hand: TrackedHand, lm: NormalizedLandmark[], now: number): void {
+  private updateHand(
+    hand: TrackedHand,
+    lm: NormalizedLandmark[],
+    confidence: number,
+    now: number,
+  ): void {
     const dt = hand.lastSeen > 0 ? Math.max((now - hand.lastSeen) / 1000, 1e-3) : 1 / 30;
     const wasStale = now - hand.lastSeen > 300;
     hand.lastSeen = now;
+    hand.confidence = confidence;
     if (wasStale) hand.filter.reset();
 
     const c = centroid(lm);
@@ -190,8 +207,23 @@ export class HandTracker {
     for (let i = 0; i < FINGERS.length - 1; i++) {
       spreadSum += dist2d(lm[FINGERS[i].tip], lm[FINGERS[i + 1].tip]);
     }
-    const spreadNorm = spreadSum / 3 / Math.max(scale, 1e-4);
-    hand.spread = THREE.MathUtils.clamp((spreadNorm - 0.35) / 0.6, 0, 1);
+    const normalizedSpread = spreadSum /
+      Math.max(scale * (FINGERS.length - 1), 1e-4);
+    const rawSpread = THREE.MathUtils.clamp(
+      (normalizedSpread - 0.32) / 0.82,
+      0,
+      1,
+    );
+    hand.spread += (rawSpread - hand.spread) * CONFIG.closednessSmoothing;
+
+    const rawPinch = 1 - THREE.MathUtils.clamp(
+      (dist2d(lm[4], lm[8]) / Math.max(scale, 1e-4) - 0.25) / 0.55,
+      0,
+      1,
+    );
+    hand.pinch += (rawPinch - hand.pinch) * 0.35;
+    const indexRatio = dist2d(lm[8], wrist) / Math.max(dist2d(lm[6], wrist), 1e-4);
+    hand.indexExtended = indexRatio >= CONFIG.fingerExtendedRatio;
   }
 
   private unproject(ndcX: number, ndcY: number, depth: number): THREE.Vector3 {
@@ -218,6 +250,12 @@ export class HandTracker {
     };
   }
 
+  updateFilterParams(): void {
+    const { minCutoff, beta, dCutoff } = CONFIG.oneEuro;
+    this.hands.Left.filter.setParams(minCutoff, beta, dCutoff);
+    this.hands.Right.filter.setParams(minCutoff, beta, dCutoff);
+  }
+
   private toState(hand: TrackedHand): HandState | null {
     if (hand.lastSeen === 0) return null;
     const age = performance.now() - hand.lastSeen;
@@ -225,16 +263,25 @@ export class HandTracker {
     return {
       position: hand.position.clone(),
       closedness: age < 250 ? hand.closedness : 0,
+      spread: age < 250 ? hand.spread : 0,
+      pinch: age < 250 ? hand.pinch : 0,
+      confidence: hand.confidence * Math.max(1 - age / CONFIG.trackingLostNeutralMs, 0),
+      indexExtended: age < 250 && hand.indexExtended,
       speed: hand.speed,
       opacity: age < 60 ? 1 : Math.max(1 - (age - 60) / CONFIG.trackingLostFadeMs, 0),
     };
   }
 
   dispose(): void {
+    if (this.disposed) return;
     this.disposed = true;
     if (this.timer !== null) clearTimeout(this.timer);
     this.landmarker?.close();
+    this.landmarker = null;
     this.stream?.getTracks().forEach((t) => t.stop());
+    this.stream = null;
+    this.video.pause();
+    this.video.srcObject = null;
     this.video.remove();
   }
 }

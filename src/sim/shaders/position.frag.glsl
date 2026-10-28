@@ -10,7 +10,7 @@ void main() {
 
   // Pulse scene: when this particle's group starts a new cycle, teleport it
   // to the burst origin. The velocity pass sets the launch velocity in the same frame.
-  if (uScene > 3.5) {
+  if (uScene > 4.5) {
     float g = pulseGroup(seed);
     float cycle = pulseCycle(uTime, g);
     if (cycle != pulseCycle(uTime - uDelta, g)) {

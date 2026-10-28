@@ -83,6 +83,7 @@ function buildParticles(quality: Quality): void {
 function applyCameraForScene(id: SceneId): void {
   if (id === 'galaxy') camera.position.set(0, 3.4, 4.6);
   else if (id === 'ocean') camera.position.set(0, 1.0, 5.6);
+  else if (id === 'saturn') camera.position.set(0, 1.25, 6.15);
   else if (id === 'heart') camera.position.set(0, 0.9, 5.4);
   else if (id === 'pulse') camera.position.set(0, 1.2, 6.2);
   else camera.position.set(0, 1.9, 5.2);
@@ -112,6 +113,8 @@ stateMachine.setScene(currentScene);
 buildParticles(overlay.quality);
 bloomPass.enabled = overlay.bloom;
 bloomPass.strength = overlay.bloomStrength;
+bloomPass.radius = CONFIG.bloom.radius;
+bloomPass.threshold = CONFIG.bloom.threshold;
 
 const input = new InputManager(canvas, camera);
 const webcamPanel = new WebcamPanel(() => activeTracker);
@@ -124,11 +127,20 @@ const startScreen = new StartScreen(
     const tracker = await HandTracker.create(camera);
     activeTracker = tracker;
     input.attachHands(tracker);
-    overlay.toast('LEFT hand = the dial, RIGHT hand drags to spin. Press G to change scene.');
+    overlay.toast(
+      startScreen.interactionMode === 'collider'
+        ? 'Collider mode — your hands are force balls. Press C to switch back.'
+        : 'Dial mode — left hand is the dial, right hand rotates. Press C for collider.',
+    );
   },
   () => {
-    overlay.toast('Mouse mode — hold left to gather the ball, right-drag to spin');
+    overlay.toast(
+      startScreen.interactionMode === 'collider'
+        ? 'Collider mode — move the mouse to create a force field. Press C to switch back.'
+        : 'Mouse mode — hold left to gather the ball, right-drag to spin',
+    );
   },
+  (mode) => input.setInteractionMode(mode),
 );
 app.appendChild(startScreen.element);
 
@@ -138,6 +150,29 @@ overlay.onBloomChange = (on) => {
 };
 overlay.onBloomStrengthChange = (v) => {
   bloomPass.strength = v;
+};
+overlay.onParticleSizeChange = (v) => {
+  particles.setPointSize(v);
+};
+overlay.onParamChange = (path, value) => {
+  if (path === 'bloom.radius') bloomPass.radius = value;
+  else if (path === 'bloom.threshold') bloomPass.threshold = value;
+  else if (path === 'oneEuro.minCutoff' || path === 'oneEuro.beta') activeTracker?.updateFilterParams();
+  particles.updateRuntimeParams();
+};
+overlay.onFullscreen = () => {
+  if (document.fullscreenElement) {
+    void document.exitFullscreen();
+  } else {
+    void document.documentElement.requestFullscreen().catch(() => overlay.toast('Fullscreen is unavailable'));
+  }
+};
+overlay.onExitToMenu = () => {
+  input.detachHands();
+  activeTracker = null;
+  if (webcamPanel.visible) webcamPanel.toggle();
+  overlay.closePanels();
+  startScreen.show();
 };
 overlay.onSceneChange = (id) => switchScene(id);
 overlay.onRebuild = () => buildParticles(overlay.quality);
@@ -169,6 +204,9 @@ window.addEventListener('keydown', (e) => {
       input.toggleInteractionMode();
       break;
     case 'escape':
+      input.detachHands();
+      activeTracker = null;
+      overlay.closePanels();
       startScreen.show();
       break;
   }
@@ -177,6 +215,7 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
   composer.setSize(window.innerWidth, window.innerHeight);
   particles.onResize();
@@ -185,7 +224,10 @@ window.addEventListener('resize', () => {
 let fps = 60;
 let fpsSampleStart = performance.now();
 let fpsFrames = 0;
+let qualityLowSince = 0;
 let autoChecked = false;
+let manualRotateCooldown = 0;
+let previousHandsActive = false;
 
 function sampleFps(now: number): void {
   fpsFrames++;
@@ -194,13 +236,18 @@ function sampleFps(now: number): void {
     fps = (fpsFrames / elapsed) * 1000;
     fpsFrames = 0;
     fpsSampleStart = now;
+    if (fps < CONFIG.fpsDowngradeBelow) {
+      if (qualityLowSince === 0) qualityLowSince = now;
+    } else if (fps > CONFIG.fpsDowngradeBelow + 8) {
+      qualityLowSince = 0;
+    }
   }
   if (
     CONFIG.autoQuality &&
     !autoChecked &&
-    now > CONFIG.fpsSampleSeconds * 1000 &&
-    fps > 0 &&
-    fps < CONFIG.fpsDowngradeBelow
+    qualityLowSince > 0 &&
+    now - qualityLowSince >= CONFIG.fpsSampleSeconds * 1000 &&
+    fps > 0
   ) {
     autoChecked = true;
     const order: Quality[] = ['high', 'med', 'low'];
@@ -222,6 +269,11 @@ function frame(): void {
 
   const { frame: gestures, usingHands } = input.poll();
 
+  if (usingHands !== previousHandsActive && input.mode === 'hand') {
+    overlay.toast(usingHands ? 'Hand tracking restored' : 'Hand tracking lost');
+  }
+  previousHandsActive = usingHands;
+
   if (gestures.modeToggled) {
     overlay.toast(
       gestures.mode === 'collider'
@@ -238,6 +290,14 @@ function frame(): void {
 
   const velUniforms = particles.velocityUniforms;
   stateMachine.update(dt, gestures, localColliders, velUniforms, particles.colorUniforms);
+  for (const event of stateMachine.consumeEvents()) {
+    const messages: Record<string, string> = {
+      burst: 'Burst field released',
+      'collapse-start': 'Black hole collapse engaged',
+      'gravity-start': 'Dual-hand gravity engaged',
+    };
+    overlay.toast(messages[event]);
+  }
 
   for (let i = 0; i < ballMeshes.length; i++) {
     const c = gestures.colliders[i];
@@ -255,10 +315,14 @@ function frame(): void {
 
   angularVel.y += -gestures.rotate.dx * CONFIG.rotateSensitivity;
   angularVel.x += gestures.rotate.dy * CONFIG.rotateSensitivity;
+  if (Math.abs(gestures.rotate.dx) + Math.abs(gestures.rotate.dy) > 0.0001) {
+    manualRotateCooldown = 0.9;
+  }
+  manualRotateCooldown = Math.max(0, manualRotateCooldown - dt);
   angularVel.clampLength(0, CONFIG.rotateMaxSpeed);
   const decay = Math.exp(-CONFIG.rotateDamping * dt);
   angularVel.multiplyScalar(decay);
-  if (angularVel.length() < CONFIG.autoSpin) angularVel.y = CONFIG.autoSpin;
+  if (manualRotateCooldown <= 0 && angularVel.length() < CONFIG.autoSpin) angularVel.y = CONFIG.autoSpin;
   particles.points.rotation.y += angularVel.y * dt;
   particles.points.rotation.x = THREE.MathUtils.clamp(
     particles.points.rotation.x + angularVel.x * dt,
@@ -269,6 +333,7 @@ function frame(): void {
   // Heart scene: kick the bloom on every beat so the glow pulses with the shape.
   bloomPass.strength = overlay.bloomStrength * (1 + 0.6 * stateMachine.beat);
 
+  particles.updateRuntimeParams();
   particles.update(dt);
   centerStar.update(dt, stateMachine.dial, stateMachine.energy, currentScene === 'galaxy');
   webcamPanel.update();
@@ -277,9 +342,13 @@ function frame(): void {
   overlay.update(
     fps,
     gestures.mode === 'collider' ? `${baseMode}·collide` : baseMode,
+    currentScene,
     stateMachine.label,
     stateMachine.accent,
     stateMachine.dial,
+    stateMachine.energy,
+    gestures.leftPose,
+    gestures.rightPose,
     gestures.leftActive,
     gestures.rightActive,
   );

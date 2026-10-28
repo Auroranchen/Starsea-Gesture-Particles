@@ -57,6 +57,11 @@ export class ParticleSystem {
       uScene: { value: 0 },
       uCenter: { value: new THREE.Vector3(0, 0, 0) },
       uTargetRadius: { value: CONFIG.cloudRadius },
+      uNebulaAxis: { value: new THREE.Vector3(CONFIG.nebula.axisX, CONFIG.nebula.axisY, CONFIG.nebula.axisZ) },
+      uFilamentStrength: { value: CONFIG.nebula.filamentStrength },
+      uNebulaFlow: { value: CONFIG.nebula.flowStrength },
+      uOceanFlow: { value: CONFIG.ocean.horizontalFlow },
+      uOceanTurbulence: { value: CONFIG.ocean.verticalTurbulenceScale },
       uStiffness: { value: CONFIG.stiffnessCloud },
       uTurbulence: { value: CONFIG.turbulenceCloud },
       uDiscRadius: { value: CONFIG.galaxy.discRadius },
@@ -72,6 +77,23 @@ export class ParticleSystem {
       uWaveAmp: { value: CONFIG.ocean.waveAmpCalm },
       uWaveFreq: { value: CONFIG.ocean.waveFreqCalm },
       uContainRadius: { value: CONFIG.ocean.containRadius },
+      uPlanetRadius: { value: CONFIG.saturn.planetRadius },
+      uPlanetFlatten: { value: CONFIG.saturn.planetFlatten },
+      uInnerRingRadius: { value: CONFIG.saturn.innerRingRadius },
+      uOuterRingRadius: { value: CONFIG.saturn.outerRingRadius },
+      uRingThickness: { value: CONFIG.saturn.ringThickness },
+      uCassiniGapStart: { value: CONFIG.saturn.cassiniGapStart },
+      uCassiniGapEnd: { value: CONFIG.saturn.cassiniGapEnd },
+      uRingPlaneStrength: { value: CONFIG.saturn.ringPlaneStrength },
+      uRingStiffness: { value: CONFIG.saturn.ringStiffness },
+      uSaturnOrbitSpeed: { value: CONFIG.saturn.orbitSpeed },
+      uSaturnOrbitGain: { value: CONFIG.saturn.orbitSpeedGain },
+      uSaturnKepler: { value: CONFIG.saturn.keplerExponent },
+      uCoreStiffness: { value: CONFIG.saturn.coreStiffness },
+      uRingTurbulence: { value: CONFIG.saturn.ringTurbulence },
+      uRingVerticalSpread: { value: CONFIG.saturn.ringVerticalSpread },
+      uSaturnCollapse: { value: CONFIG.saturn.collapse },
+      uSaturnTilt: { value: CONFIG.saturn.tilt },
       uBall: { value: new THREE.Vector3(0, 0, 0) },
       uBallPrev: { value: new THREE.Vector3(0, 0, 0) },
       uBallStrength: { value: 0 },
@@ -82,6 +104,19 @@ export class ParticleSystem {
       uBall2Strength: { value: 0 },
       uBall2Push: { value: new THREE.Vector3() },
       uBall2Active: { value: 0 },
+      uExpansionCenter: { value: new THREE.Vector3() },
+      uExpansionStrength: { value: 0 },
+      uExpansionRadius: { value: 2.4 },
+      uBlackHoleCenter: { value: new THREE.Vector3() },
+      uBlackHoleStrength: { value: 0 },
+      uBlackHoleRadius: { value: 0.6 },
+      uGravityCenter: { value: new THREE.Vector3() },
+      uGravityAxis: { value: new THREE.Vector3(1, 0, 0) },
+      uGravityStrength: { value: 0 },
+      uGravityRadius: { value: 2.6 },
+      uPulseCenter: { value: new THREE.Vector3() },
+      uPulseStrength: { value: 0 },
+      uGalaxyScale: { value: 0.5 },
       uDamping: { value: CONFIG.damping },
       uMaxSpeed: { value: CONFIG.maxSpeed },
       uHeartScale: { value: CONFIG.heart.scale },
@@ -89,7 +124,7 @@ export class ParticleSystem {
       uBeatAmp: { value: CONFIG.heart.beatAmp },
       uWaveForce: { value: CONFIG.heart.waveForce },
       uWaveSpeed: { value: CONFIG.heart.waveSpeed },
-      uHaloRadius: { value: 1.9 },
+      uHaloRadius: { value: 2.05 },
       uHaloSpin: { value: CONFIG.heart.haloSpin },
       uBurstSpeed: { value: CONFIG.pulse.burstSpeed },
       uGravity: { value: CONFIG.pulse.gravity },
@@ -123,8 +158,6 @@ export class ParticleSystem {
       fragmentShader: withCommon(pointsFrag),
       uniforms: {
         ...this.shared,
-        uScene: this.velVar.material.uniforms.uScene,
-        uTime: this.velVar.material.uniforms.uTime,
         uRainbow: { value: 0 },
         uPositions: { value: null },
         uVelocities: { value: null },
@@ -139,6 +172,13 @@ export class ParticleSystem {
         uSpeedNorm: { value: 1 },
         uRadialColor: { value: 0 },
         uRadialRange: { value: 2.4 },
+        uOceanWaveAmp: { value: CONFIG.ocean.waveAmpCalm },
+        uOceanFoam: { value: CONFIG.ocean.foamThreshold },
+        uShapeMode: { value: 0 },
+        uBlackHoleVisual: { value: 0 },
+        uTime: { value: 0 },
+        uScene: { value: 0 },
+        uPulseStrength: { value: 0 },
       },
       transparent: true,
       depthWrite: false,
@@ -176,12 +216,55 @@ export class ParticleSystem {
         vel[i + 1] = 0;
         vel[i + 2] = -Math.cos(a) * v;
       } else if (scene === 'ocean') {
+        // Earth: uniform sampling on a sphere shell (thin, like Saturn's planet core)
         const a = Math.random() * Math.PI * 2;
-        const r = Math.sqrt(Math.random()) * CONFIG.ocean.containRadius;
-        pos[i] = Math.cos(a) * r;
-        pos[i + 1] = (Math.random() - 0.5) * 0.3;
-        pos[i + 2] = Math.sin(a) * r;
-        vel[i] = vel[i + 1] = vel[i + 2] = 0;
+        const cosT = Math.random() * 2 - 1;
+        const sinT = Math.sqrt(1 - cosT * cosT);
+        const r = CONFIG.ocean.containRadius * (0.96 + Math.random() * 0.04);
+        pos[i] = Math.cos(a) * sinT * r;
+        pos[i + 1] = cosT * r;
+        pos[i + 2] = Math.sin(a) * sinT * r;
+        // slow eastward drift around Y so the globe self-rotates
+        const spin = CONFIG.ocean.horizontalFlow * 0.9;
+        vel[i] = Math.sin(a) * spin;
+        vel[i + 1] = 0;
+        vel[i + 2] = -Math.cos(a) * spin;
+      } else if (scene === 'saturn') {
+        const isRing = seed > CONFIG.saturn.particleRoleThreshold;
+        const tilt = CONFIG.saturn.tilt;
+        if (isRing) {
+          const span = CONFIG.saturn.outerRingRadius - CONFIG.saturn.innerRingRadius;
+          let r = CONFIG.saturn.innerRingRadius + Math.sqrt(Math.random()) * span;
+          if (r > CONFIG.saturn.cassiniGapStart && r < CONFIG.saturn.cassiniGapEnd) {
+            r = Math.random() < 0.5
+              ? CONFIG.saturn.cassiniGapStart - Math.random() * 0.12
+              : CONFIG.saturn.cassiniGapEnd + Math.random() * 0.12;
+          }
+          const a = Math.random() * Math.PI * 2;
+          const y = (Math.random() - 0.5) * CONFIG.saturn.ringThickness;
+          const localY = y;
+          pos[i] = Math.cos(a) * r;
+          pos[i + 1] = localY * Math.cos(tilt) - Math.sin(a) * r * Math.sin(tilt) * 0.035;
+          pos[i + 2] = Math.sin(a) * r * Math.cos(tilt) + localY * Math.sin(tilt);
+          const v = CONFIG.saturn.orbitSpeed * Math.pow(Math.max(r, 0.2), -CONFIG.saturn.keplerExponent);
+          vel[i] = -Math.sin(a) * v;
+          vel[i + 1] = 0;
+          vel[i + 2] = Math.cos(a) * v;
+        } else {
+          const a = Math.random() * Math.PI * 2;
+          const cosT = Math.random() * 2 - 1;
+          const sinT = Math.sqrt(1 - cosT * cosT);
+          const r = CONFIG.saturn.planetRadius * (0.78 + Math.random() * 0.22);
+          const localX = Math.cos(a) * sinT * r;
+          const localY = cosT * r * CONFIG.saturn.planetFlatten;
+          const localZ = Math.sin(a) * sinT * r;
+          pos[i] = localX;
+          pos[i + 1] = localY * Math.cos(tilt) - localZ * Math.sin(tilt);
+          pos[i + 2] = localZ * Math.cos(tilt) + localY * Math.sin(tilt);
+          vel[i] = (Math.random() - 0.5) * 0.04;
+          vel[i + 1] = (Math.random() - 0.5) * 0.04;
+          vel[i + 2] = (Math.random() - 0.5) * 0.04;
+        }
       } else if (scene === 'pulse') {
         // Tiny dormant spark cloud; each group launches on its first cycle.
         const r = Math.cbrt(Math.random()) * 0.25;
@@ -235,11 +318,23 @@ export class ParticleSystem {
     return this.pointsMaterial.uniforms;
   }
 
+  setPointSize(value: number): void {
+    this.pointsMaterial.uniforms.uPointSize.value = THREE.MathUtils.clamp(value, 0.5, 5);
+  }
+
+  updateRuntimeParams(): void {
+    this.velVar.material.uniforms.uDamping.value = CONFIG.damping;
+    this.velVar.material.uniforms.uMaxSpeed.value = CONFIG.maxSpeed;
+    this.velVar.material.uniforms.uBallRadius.value = CONFIG.ballRadius;
+    this.pointsMaterial.uniforms.uPointSize.value = CONFIG.pointSize;
+  }
+
   update(delta: number): void {
     const dt = Math.min(delta, CONFIG.maxDelta);
     this.time += dt;
 
     this.velVar.material.uniforms.uTime.value = this.time;
+    this.pointsMaterial.uniforms.uTime.value = this.time;
     this.velVar.material.uniforms.uDelta.value = dt;
     this.posVar.material.uniforms.uDelta.value = dt;
 

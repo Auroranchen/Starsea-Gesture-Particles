@@ -21,7 +21,6 @@ const GROUPS: Group[] = [
     params: [
       { path: 'damping', label: 'damping', min: 0.9, max: 0.999, step: 0.001 },
       { path: 'maxSpeed', label: 'max speed', min: 1, max: 8, step: 0.1 },
-      { path: 'pointSize', label: 'point size', min: 0.5, max: 5, step: 0.1 },
       { path: 'bloom.radius', label: 'bloom radius', min: 0, max: 1, step: 0.05 },
       { path: 'bloom.threshold', label: 'bloom threshold', min: 0, max: 1, step: 0.02 },
     ],
@@ -129,9 +128,11 @@ export class ParamPanel {
   readonly element: HTMLDetailsElement;
   private defaults: Record<string, number> = {};
   onRebuild: (() => void) | null = null;
+  onChange: ((path: string, value: number) => void) | null = null;
 
-  constructor(onRebuild?: () => void) {
+  constructor(onRebuild?: () => void, onChange?: (path: string, value: number) => void) {
     this.onRebuild = onRebuild ?? null;
+    this.onChange = onChange ?? null;
     for (const g of GROUPS) {
       for (const p of g.params) this.defaults[p.path] = getPath(CONFIG as never, p.path);
     }
@@ -190,6 +191,7 @@ export class ParamPanel {
       setPath(CONFIG as never, p.path, v);
       out.textContent = fmt(v);
       this.persist(p.path, v);
+      this.onChange?.(p.path, v);
     });
     return row;
   }
@@ -228,6 +230,7 @@ export class ParamPanel {
       const v = this.defaults[param.path];
       input.value = String(v);
       out.textContent = fmt(v);
+      this.onChange?.(param.path, v);
     }
   }
 }
