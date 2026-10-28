@@ -1,5 +1,7 @@
 # 迭代 02 · 粒子地球与极光风暴（ocean 重写）
 
+> **事后技术复盘，非原始对话，禁止作为原始 Prompt 链提交。** 下文“我 / AI”的逐轮对话、问题现象与验收结论均为未经原始记录核对的回溯稿；尤其切平面湍流投影尚未在代码中实现。只可用来列出待核技术问题，实际过程须以原始导出和实测为准。
+
 | 项目 | 内容 |
 |---|---|
 | 迭代周期 | 2026-10-23 → 2026-10-25 |
@@ -110,26 +112,16 @@ pos[i + 2] = Math.sin(a) * sinT * r;
 
 **症状**：球体轮廓"发毛"，边缘像沸腾的水面，30 秒后球体明显膨胀。
 
-### Round 4 — 用现象定位
+### Round 4 — 切平面投影：待实现的修复方案
 
-> **我**：
-> 球在膨胀，边缘发毛。我关掉湍流就正常了，所以是 `uOceanTurbulence` 那一项的问题。
-> 你的 `curlNoise(normal * 2.4 + uTime * 0.035)` 输出是三维向量，直接加到 force 上
-> 就带了径向分量——这会把粒子往外推。请改成**先把湍流向量投影到切平面**，
-> 再乘以一个随纬度衰减的系数。同时告诉我，为什么纬度衰减是必要的。
-
-**AI 修正**：
+> **技术分析示例，并非已核对的原始对话或已合入代码**：当前 `oceanForce()` 将 `curlNoise(...)` 直接加入合力，未去除径向分量。若要实现沿球面扰动，可考虑以下投影，并在修改代码后做运行验证。
 
 ```glsl
-// Latitude-aware eastward spin keeps the spherical surface alive without breaking its silhouette.
 vec3 tangentNoise = curlNoise(normal * 2.4 + uTime * 0.035);
-tangentNoise -= normal * dot(tangentNoise, normal);  // 投影到切平面
+tangentNoise -= normal * dot(tangentNoise, normal);
 ```
 
-并解释说纬度衰减是为了避免极区粒子被横向速度甩出去（极区半径小，同样的线速度对应
-极大角速度）。
-
-**结果**：球体稳定，轮廓干净，赤道明显比两极转得快。✅
+**当前结果**：该投影尚未在活动仓库实现；不能声称已修复球体膨胀或经过 30 秒稳定性测试。
 
 ### Round 5 — 极光（新增，最耗时的一轮）
 
@@ -182,7 +174,7 @@ tangentNoise -= normal * dot(tangentNoise, normal);  // 投影到切平面
 | # | 症状 | 根因 | 修法 | 谁先发现 |
 |---|---|---|---|---|
 | 1 | 两极粒子堆积 | 用两个随机角采样球面，非等面积 | `cosθ = 2u − 1` 等面积采样 | 我在验收标准里就写死了，AI 首版即正确 |
-| 2 | 球体膨胀、边缘发毛 | 湍流向量带径向分量 | 投影到切平面 + 纬度衰减 | 我关掉湍流做变量隔离 |
+| 2 | 噪声扰动可能带径向分量 | 当前 `curlNoise` 直接叠加 | 切平面投影是待实现方案，不能作为已修复结果 | 需实机验证 |
 | 3 | 极光成散点、不成片 | 幕布脚用纯随机方位角，粒子间无相关性 | 用 `atan(z,x)` 做连续参数 + 低频谱波 | 我看画面判断 |
 | 4 | `uAurora=0` 残留薄雾 | 抬升用 `mix`，存在常数偏置 | 改为乘性权重，保证 0 时严格归零 | 我逐帧对比截图 |
 | 5 | 切场景后旧参数报 undefined | 重写时漏删 `points.frag.glsl` 中的 `uOcean*` 引用 | 按"删除清单"逐条核对 | 浏览器控制台 |
@@ -195,12 +187,12 @@ tangentNoise -= normal * dot(tangentNoise, normal);  // 投影到切平面
 |---|---|---|
 | 常量 | `config.ts` | `CONFIG.ocean` 重写：`containRadius` / `horizontalFlow` / `auroraFraction` / `auroraHeight` / `auroraSmoothing`；`sceneDialNames.ocean` 由 `['calm','storm']` 改为 `['calm','aurora']` |
 | 播种 | `ParticleSystem.ts` | ocean 分支由平面网格改为薄球壳等面积采样 + 东向初速 |
-| 力场 | `velocity.frag.glsl` | `oceanForce()` 重写（径向弹簧 + 纬度加权切向 + 切平面湍流）；新增 `auroraForce()`；`main()` 增加极光分支 |
+| 力场 | `velocity.frag.glsl` | `oceanForce()` 包含径向弹簧、纬度加权切向驱动及直接叠加的湍流（**未实现完整切平面投影**）；另有 `auroraForce()` |
 | 状态 | `StateMachine.ts` | 新增 `aurora` 字段与 `uAurora` 平滑（`auroraSmoothing = 2.5`）；握拳或 dial 均可触发 |
 | 着色 | `points.frag.glsl` | 新增 `earthNoise()` / `earthLand()`；海陆云三分色；极光绿→品红渐变；昼夜明暗 |
 
-**验证**：`tsc --noEmit` 零错误；五条验收标准逐条对照通过；旧的 `waveHeight()` 已完全移除，
-全仓库 `grep` 无残留引用。
+**待验证**：本篇描述的轮次与实机验收结果未取得原始证据；构建通过与视觉稳定性是不同检查，不能写成五条验收均已完成。
+`waveHeight()` 是否已无引用可在最终提交前搜索仓库复核；本次未据此推断实机稳定性。
 
 ---
 
