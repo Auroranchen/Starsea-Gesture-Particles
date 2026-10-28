@@ -21,6 +21,7 @@ const GROUPS: Group[] = [
     params: [
       { path: 'damping', label: 'damping', min: 0.9, max: 0.999, step: 0.001 },
       { path: 'maxSpeed', label: 'max speed', min: 1, max: 8, step: 0.1 },
+      { path: 'pointSize', label: 'point size', min: 0.5, max: 5, step: 0.1 },
       { path: 'bloom.radius', label: 'bloom radius', min: 0, max: 1, step: 0.05 },
       { path: 'bloom.threshold', label: 'bloom threshold', min: 0, max: 1, step: 0.02 },
     ],
@@ -69,6 +70,28 @@ const GROUPS: Group[] = [
     ],
   },
   {
+    title: 'Heart (heartbeat ↔ dark core)',
+    params: [
+      { path: 'heart.scale', label: 'size', min: 0.5, max: 2.2, step: 0.05 },
+      { path: 'heart.bpmCalm', label: 'bpm · calm', min: 30, max: 120, step: 1 },
+      { path: 'heart.bpmIntense', label: 'bpm · dark core', min: 60, max: 200, step: 1 },
+      { path: 'heart.beatAmp', label: 'beat amount', min: 0, max: 0.4, step: 0.01 },
+      { path: 'heart.waveForce', label: 'shockwave · calm', min: 0, max: 10, step: 0.1 },
+      { path: 'heart.waveForceIntense', label: 'shockwave · dark core', min: 0, max: 15, step: 0.1 },
+      { path: 'heart.haloSpin', label: 'halo spin', min: 0, max: 4, step: 0.05 },
+    ],
+  },
+  {
+    title: 'Pulse (fireworks ↔ ion pulse)',
+    params: [
+      { path: 'pulse.period', label: 'burst period (s)', min: 1, max: 6, step: 0.1 },
+      { path: 'pulse.groups', label: 'bursts per period', min: 1, max: 12, step: 1 },
+      { path: 'pulse.burstSpeed', label: 'burst speed', min: 1, max: 4.2, step: 0.05 },
+      { path: 'pulse.gravity', label: 'gravity', min: 0, max: 3, step: 0.05 },
+      { path: 'pulse.recall', label: 'ion recall', min: 0, max: 6, step: 0.1 },
+    ],
+  },
+  {
     title: 'Collider (press C)',
     params: [
       { path: 'ballRadius', label: 'collider radius', min: 0.3, max: 3, step: 0.05 },
@@ -106,11 +129,9 @@ export class ParamPanel {
   readonly element: HTMLDetailsElement;
   private defaults: Record<string, number> = {};
   onRebuild: (() => void) | null = null;
-  onChange: ((path: string, value: number) => void) | null = null;
 
-  constructor(onRebuild?: () => void, onChange?: (path: string, value: number) => void) {
+  constructor(onRebuild?: () => void) {
     this.onRebuild = onRebuild ?? null;
-    this.onChange = onChange ?? null;
     for (const g of GROUPS) {
       for (const p of g.params) this.defaults[p.path] = getPath(CONFIG as never, p.path);
     }
@@ -169,7 +190,6 @@ export class ParamPanel {
       setPath(CONFIG as never, p.path, v);
       out.textContent = fmt(v);
       this.persist(p.path, v);
-      this.onChange?.(p.path, v);
     });
     return row;
   }
@@ -208,7 +228,6 @@ export class ParamPanel {
       const v = this.defaults[param.path];
       input.value = String(v);
       out.textContent = fmt(v);
-      this.onChange?.(param.path, v);
     }
   }
 }

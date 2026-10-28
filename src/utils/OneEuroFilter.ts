@@ -57,12 +57,6 @@ export class OneEuroFilter {
     this.dx.reset();
     this.lastTime = null;
   }
-
-  setParams(minCutoff: number, beta: number, dCutoff: number): void {
-    this.minCutoff = minCutoff;
-    this.beta = beta;
-    this.dCutoff = dCutoff;
-  }
 }
 
 export class OneEuroFilter3 {
@@ -84,11 +78,5 @@ export class OneEuroFilter3 {
     this.fx.reset();
     this.fy.reset();
     this.fz.reset();
-  }
-
-  setParams(minCutoff: number, beta: number, dCutoff: number): void {
-    this.fx.setParams(minCutoff, beta, dCutoff);
-    this.fy.setParams(minCutoff, beta, dCutoff);
-    this.fz.setParams(minCutoff, beta, dCutoff);
   }
 }

@@ -6,7 +6,6 @@ interface OverlaySettings {
   quality: Quality;
   bloom: boolean;
   bloomStrength: number;
-  pointSize: number;
   scene: SceneId;
 }
 
@@ -15,10 +14,6 @@ export class Overlay {
   onQualityChange: ((q: Quality) => void) | null = null;
   onBloomChange: ((on: boolean) => void) | null = null;
   onBloomStrengthChange: ((v: number) => void) | null = null;
-  onParticleSizeChange: ((v: number) => void) | null = null;
-  onParamChange: ((path: string, value: number) => void) | null = null;
-  onFullscreen: (() => void) | null = null;
-  onExitToMenu: (() => void) | null = null;
   onSceneChange: ((s: SceneId) => void) | null = null;
   onRebuild: (() => void) | null = null;
 
@@ -26,19 +21,12 @@ export class Overlay {
   private countEl: HTMLElement;
   private modeEl: HTMLElement;
   private stateEl: HTMLElement;
-  private sceneEl: HTMLElement;
-  private energyEl: HTMLElement;
-  private energyFillEl: HTMLElement;
   private gatherEl: HTMLElement;
   private gatherLabelEl: HTMLElement;
   private handsEl: HTMLElement;
-  private posesEl: HTMLElement;
-  private trackingEl: HTMLElement;
   private helpEl: HTMLElement;
   private settingsEl: HTMLElement;
   private toastEl: HTMLElement;
-  private pointSizeEl: HTMLInputElement;
-  private pointSizeValueEl: HTMLElement;
   private toastTimer: number | null = null;
   private settings: OverlaySettings;
 
@@ -52,14 +40,9 @@ export class Overlay {
         <div class="hud-row"><span class="hud-label">fps</span><span data-role="fps">--</span></div>
         <div class="hud-row"><span class="hud-label">particles</span><span data-role="count">--</span></div>
         <div class="hud-row"><span class="hud-label">input</span><span data-role="mode">mouse</span></div>
-        <div class="hud-row"><span class="hud-label">scene</span><span data-role="scene">nebula</span></div>
         <div class="hud-row"><span class="hud-label">state</span><span data-role="state" class="hud-state">drift</span></div>
-        <div class="hud-row"><span class="hud-label">energy</span><span data-role="energy">0%</span></div>
-        <div class="hud-meter"><span data-role="energy-fill"></span></div>
         <div class="hud-row"><span class="hud-label" data-role="gather-label">ball</span><span data-role="gather">0%</span></div>
-        <div class="hud-row"><span class="hud-label">hands</span><span data-role="hands">L · / R ·</span></div>
-        <div class="hud-row"><span class="hud-label">pose</span><span data-role="poses">neutral / neutral</span></div>
-        <div class="hud-row"><span class="hud-label">tracking</span><span data-role="tracking">mouse</span></div>
+        <div class="hud-row"><span class="hud-label">hands</span><span data-role="hands">&ndash; / &ndash;</span></div>
         <div class="hud-keys">? help &middot; s settings &middot; p camera view</div>
       </div>
       <div class="panel help hidden" data-role="help">
@@ -84,7 +67,8 @@ export class Overlay {
             <button data-scene="nebula">nebula</button>
             <button data-scene="galaxy">galaxy</button>
             <button data-scene="ocean">ocean</button>
-            <button data-scene="saturn">saturn</button>
+            <button data-scene="heart">heart</button>
+            <button data-scene="pulse">pulse</button>
           </div>
         </div>
         <div class="setting-row">
@@ -103,14 +87,6 @@ export class Overlay {
           <span>bloom amount <em data-role="bloom-strength-value"></em></span>
           <input type="range" data-role="bloom-strength" min="0" max="2" step="0.05" />
         </div>
-        <div class="setting-row">
-          <span>particle size <em data-role="point-size-value"></em></span>
-          <input type="range" data-role="point-size" min="0.5" max="5" step="0.1" />
-        </div>
-        <div class="setting-actions">
-          <button class="btn-ghost" data-role="fullscreen" title="Toggle fullscreen">fullscreen</button>
-          <button class="btn-ghost" data-role="exit-menu" title="Return to the mode selection screen">back to menu</button>
-        </div>
       </div>
       <div class="toast hidden" data-role="toast"></div>
     `;
@@ -118,20 +94,13 @@ export class Overlay {
     this.fpsEl = this.q('[data-role="fps"]');
     this.countEl = this.q('[data-role="count"]');
     this.modeEl = this.q('[data-role="mode"]');
-    this.sceneEl = this.q('[data-role="scene"]');
     this.stateEl = this.q('[data-role="state"]');
-    this.energyEl = this.q('[data-role="energy"]');
-    this.energyFillEl = this.q('[data-role="energy-fill"]');
     this.gatherEl = this.q('[data-role="gather"]');
     this.gatherLabelEl = this.q('[data-role="gather-label"]');
     this.handsEl = this.q('[data-role="hands"]');
-    this.posesEl = this.q('[data-role="poses"]');
-    this.trackingEl = this.q('[data-role="tracking"]');
     this.helpEl = this.q('[data-role="help"]');
     this.settingsEl = this.q('[data-role="settings"]');
     this.toastEl = this.q('[data-role="toast"]');
-    this.pointSizeEl = this.q<HTMLInputElement>('[data-role="point-size"]');
-    this.pointSizeValueEl = this.q('[data-role="point-size-value"]');
 
     for (const btn of this.element.querySelectorAll<HTMLButtonElement>('[data-q]')) {
       btn.addEventListener('click', () => {
@@ -161,24 +130,7 @@ export class Overlay {
       this.syncSettingsUi();
       this.onBloomStrengthChange?.(this.settings.bloomStrength);
     });
-    this.pointSizeEl.addEventListener('input', () => {
-      const value = parseFloat(this.pointSizeEl.value);
-      this.settings.pointSize = value;
-      CONFIG.pointSize = value;
-      this.saveSettings();
-      this.syncSettingsUi();
-      this.onParticleSizeChange?.(value);
-    });
-    this.q<HTMLButtonElement>('[data-role="fullscreen"]').addEventListener('click', () => {
-      this.onFullscreen?.();
-    });
-    this.q<HTMLButtonElement>('[data-role="exit-menu"]').addEventListener('click', () => {
-      this.onExitToMenu?.();
-    });
-    const paramPanel = new ParamPanel(() => this.onRebuild?.(), (path, value) => {
-      this.onParamChange?.(path, value);
-    });
-    this.settingsEl.appendChild(paramPanel.element);
+    this.settingsEl.appendChild(new ParamPanel(() => this.onRebuild?.()).element);
     this.syncSettingsUi();
   }
 
@@ -187,32 +139,23 @@ export class Overlay {
   }
 
   private loadSettings(): OverlaySettings {
-    const defaults: OverlaySettings = {
+    try {
+      const raw = localStorage.getItem('gesture-particles.settings');
+      if (raw)
+        return {
+          quality: CONFIG.defaultQuality,
+          bloom: true,
+          bloomStrength: CONFIG.bloom.strength,
+          scene: CONFIG.defaultScene,
+          ...JSON.parse(raw),
+        };
+    } catch {}
+    return {
       quality: CONFIG.defaultQuality,
       bloom: true,
       bloomStrength: CONFIG.bloom.strength,
-      pointSize: CONFIG.pointSize,
       scene: CONFIG.defaultScene,
     };
-    try {
-      const raw = localStorage.getItem('gesture-particles.settings');
-      if (!raw) return defaults;
-      const stored = JSON.parse(raw) as Partial<OverlaySettings>;
-      return {
-        ...defaults,
-        quality: stored.quality === 'low' || stored.quality === 'med' || stored.quality === 'high'
-          ? stored.quality
-          : defaults.quality,
-        bloom: typeof stored.bloom === 'boolean' ? stored.bloom : defaults.bloom,
-        bloomStrength: finiteInRange(stored.bloomStrength, 0, 2, defaults.bloomStrength),
-        pointSize: finiteInRange(stored.pointSize, 0.5, 5, defaults.pointSize),
-        scene: stored.scene === 'nebula' || stored.scene === 'galaxy' || stored.scene === 'ocean' || stored.scene === 'saturn'
-          ? stored.scene
-          : defaults.scene,
-      };
-    } catch {
-      return defaults;
-    }
   }
 
   private saveSettings(): void {
@@ -236,9 +179,6 @@ export class Overlay {
     slider.disabled = !this.settings.bloom;
     this.q('[data-role="bloom-strength-value"]').textContent =
       this.settings.bloomStrength.toFixed(2);
-    this.pointSizeEl.value = String(this.settings.pointSize);
-    CONFIG.pointSize = this.settings.pointSize;
-    this.pointSizeValueEl.textContent = this.settings.pointSize.toFixed(1);
   }
 
   get bloomStrength(): number {
@@ -272,30 +212,18 @@ export class Overlay {
   update(
     fps: number,
     mode: string,
-    scene: SceneId,
     stateLabel: string,
     accent: string,
     gather: number,
-    energy: number,
-    leftPose: string,
-    rightPose: string,
     leftActive: boolean,
     rightActive: boolean,
   ): void {
     this.fpsEl.textContent = fps.toFixed(0);
     this.modeEl.textContent = mode;
-    this.sceneEl.textContent = scene;
     this.stateEl.textContent = stateLabel;
     this.stateEl.style.color = accent;
-    const energyValue = clamp01(energy);
-    this.energyEl.textContent = `${Math.round(energyValue * 100)}%`;
-    (this.energyFillEl as HTMLElement).style.width = `${energyValue * 100}%`;
-    this.energyFillEl.style.background = accent;
-    this.gatherEl.textContent = `${Math.round(clamp01(gather) * 100)}%`;
+    this.gatherEl.textContent = `${Math.round(gather * 100)}%`;
     this.handsEl.textContent = `L ${leftActive ? '\u25cf' : '\u00b7'} / R ${rightActive ? '\u25cf' : '\u00b7'}`;
-    this.posesEl.textContent = `${leftPose} / ${rightPose}`;
-    this.trackingEl.textContent = leftActive || rightActive ? 'locked' : mode.includes('hand') ? 'lost' : 'mouse';
-    this.trackingEl.style.color = leftActive || rightActive ? accent : '';
     this.countEl.textContent = formatCount(QUALITY_SIZES[this.settings.quality] ** 2);
   }
 
@@ -313,27 +241,12 @@ export class Overlay {
     this.helpEl.classList.add('hidden');
   }
 
-  closePanels(): void {
-    this.helpEl.classList.add('hidden');
-    this.settingsEl.classList.add('hidden');
-  }
-
   toast(message: string): void {
     this.toastEl.textContent = message;
     this.toastEl.classList.remove('hidden');
     if (this.toastTimer !== null) clearTimeout(this.toastTimer);
     this.toastTimer = window.setTimeout(() => this.toastEl.classList.add('hidden'), 4200);
   }
-}
-
-function finiteInRange(value: unknown, min: number, max: number, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value)
-    ? Math.min(Math.max(value, min), max)
-    : fallback;
-}
-
-function clamp01(value: number): number {
-  return Math.min(Math.max(value, 0), 1);
 }
 
 function formatCount(n: number): string {

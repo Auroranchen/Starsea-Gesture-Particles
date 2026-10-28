@@ -1,7 +1,7 @@
 export const QUALITY_SIZES = { low: 256, med: 512, high: 1024 } as const;
 export type Quality = keyof typeof QUALITY_SIZES;
 
-export const SCENES = ['nebula', 'galaxy', 'ocean', 'saturn'] as const;
+export const SCENES = ['nebula', 'galaxy', 'ocean', 'heart', 'pulse'] as const;
 export type SceneId = (typeof SCENES)[number];
 
 export const CONFIG = {
@@ -41,34 +41,39 @@ export const CONFIG = {
   defaultScene: 'nebula' as SceneId,
   scenePalettes: {
     nebula: {
-      calm: ['#090e31', '#6548dc', '#e2a9ff'] as [string, string, string],
-      intense: ['#160923', '#ca48ea', '#ffb967'] as [string, string, string],
+      calm: ['#0a2740', '#17c3ff', '#b46bff'] as [string, string, string],
+      intense: ['#062d12', '#4dff6a', '#f6ff8a'] as [string, string, string],
     },
     galaxy: {
-      calm: ['#05091c', '#8a36d5', '#ff9d43'] as [string, string, string],
-      intense: ['#16030d', '#ff4b19', '#ffd36b'] as [string, string, string],
+      calm: ['#0d1233', '#a9c3f5', '#ffe9c0'] as [string, string, string],
+      intense: ['#2a0d03', '#ff7a26', '#ffc46a'] as [string, string, string],
     },
     ocean: {
-      calm: ['#04152f', '#1487c1', '#b7f3ff'] as [string, string, string],
-      intense: ['#062b3e', '#42b96b', '#ffffff'] as [string, string, string],
+      calm: ['#03182e', '#1897d6', '#9fe8ff'] as [string, string, string],
+      intense: ['#041220', '#2fd0c8', '#ffffff'] as [string, string, string],
     },
-
-    saturn: {
-      calm: ['#160d30', '#8b5cf6', '#f5d18a'] as [string, string, string],
-      intense: ['#24103b', '#c084fc', '#ffe4a3'] as [string, string, string],
+    heart: {
+      calm: ['#2a0418', '#ff2d6f', '#ffc2d9'] as [string, string, string],
+      intense: ['#1c0636', '#b026ff', '#ff7ae0'] as [string, string, string],
+    },
+    pulse: {
+      calm: ['#1a0a02', '#ffb347', '#5ad8ff'] as [string, string, string],
+      intense: ['#020a24', '#3a8bff', '#c6f4ff'] as [string, string, string],
     },
   },
   sceneDialNames: {
     nebula: ['cloud', 'ball'] as [string, string],
     galaxy: ['galaxy', 'collapse'] as [string, string],
     ocean: ['calm', 'storm'] as [string, string],
-    saturn: ['orbit', 'rings'] as [string, string],
+    heart: ['heartbeat', 'dark core'] as [string, string],
+    pulse: ['fireworks', 'ion pulse'] as [string, string],
   },
   sceneAccents: {
-    nebula: ['#8d4dff', '#ff9d43'] as [string, string],
-    galaxy: ['#9c58ff', '#ffad4d'] as [string, string],
-    ocean: ['#39b9ee', '#8ce5b4'] as [string, string],
-    saturn: ['#a970ff', '#ffd36b'] as [string, string],
+    nebula: ['#17c3ff', '#4dff6a'] as [string, string],
+    galaxy: ['#89b4ff', '#ffb066'] as [string, string],
+    ocean: ['#1897d6', '#7df0e2'] as [string, string],
+    heart: ['#ff4f86', '#c46bff'] as [string, string],
+    pulse: ['#ffb347', '#6fb4ff'] as [string, string],
   },
 
   galaxy: {
@@ -95,50 +100,52 @@ export const CONFIG = {
     holeRadius: 0.47,
   },
 
-  nebula: {
-    planetRadius: 0.8,
-    axisX: 1.15,
-    axisY: 0.86,
-    axisZ: 0.96,
-    filamentStrength: 0.3,
-    flowStrength: 0.4,
-  },
-
   ocean: {
-    waveAmpCalm: 0.04,
-    waveAmpStorm: 0.18,
-    fistStormBoost: 0.65,
-    waveFreqCalm: 0.7,
-    waveFreqStorm: 1.5,
-    turbulenceCalm: 0.08,
-    turbulenceStorm: 0.42,
-    stiffness: 5.8,
-    containRadius: 1.28,
-    horizontalFlow: 0.22,
-    verticalTurbulenceScale: 0.28,
-    foamThreshold: 0.53,
+    waveAmpCalm: 0.22,
+    waveAmpStorm: 0.85,
+    waveFreqCalm: 1.0,
+    waveFreqStorm: 2.0,
+    turbulenceCalm: 0.3,
+    turbulenceStorm: 1.4,
+    stiffness: 3.0,
+    containRadius: 3.0,
   },
 
-  saturn: {
-    planetRadius: 1.02,
-    planetFlatten: 0.9,
-    innerRingRadius: 1.24,
-    outerRingRadius: 2.72,
-    ringThickness: 0.075,
-    cassiniGapStart: 1.72,
-    cassiniGapEnd: 1.9,
-    ringPlaneStrength: 7.5,
-    ringStiffness: 5.8,
-    orbitSpeed: 0.42,
-    orbitSpeedGain: 1.35,
-    keplerExponent: 0.5,
-    coreStiffness: 5.4,
-    ringTurbulence: 0.16,
-    ringVerticalSpread: 0.1,
-    collapse: 0.22,
-    orbitSpeedGainIntense: 1.9,
-    particleRoleThreshold: 0.34,
-    tilt: 0.42,
+  // Beating 3D heart wrapped in an orbiting dark-matter halo.
+  // Dial 0 = slow heartbeat, dial 1 = contracted "dark core": faster, harder beats,
+  // stronger shockwaves, and the halo is pulled inward and spun up.
+  heart: {
+    scale: 1.3,
+    bpmCalm: 62,
+    bpmIntense: 128,
+    beatAmp: 0.10,
+    beatAmpIntense: 0.22,
+    contract: 0.86,
+    waveForce: 1.6,
+    waveForceIntense: 5.5,
+    waveSpeed: 3.4,
+    haloFraction: 0.2,
+    haloSpin: 1.6,
+    stiffness: 5.0,
+    stiffnessIntense: 8.0,
+    turbulence: 0.32,
+    turbulenceIntense: 0.18,
+  },
+
+  // Ballistic fireworks. Each burst group fires once per period, staggered.
+  // Dial 1 = "ion pulse": bursts converge to the center, flatten into ring
+  // shockwaves, lose gravity and get recalled to the core.
+  pulse: {
+    period: 3.0,
+    groups: 6,
+    burstSpeed: 3.3,
+    burstSpeedIon: 4.0,
+    gravity: 0.9,
+    recall: 2.6,
+    turbulence: 0.12,
+    turbulenceIon: 0.55,
+    hueSpread: 2.4,
+    hueSpreadIon: 0.6,
   },
 
   detectHz: 30,
