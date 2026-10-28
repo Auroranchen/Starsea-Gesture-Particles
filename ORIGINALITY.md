@@ -97,18 +97,24 @@
 | 类型安全 | 全量 TypeScript 严格检查，构建前 `tsc` 强制通过（当前 **0 错误**） |
 | 部署 | GitHub Actions 自动构建并发布到 GitHub Pages |
 
-### 4.6 改动量对照
+### 4.6 双手控制专属视觉层（2026-10-28）
+
+- **模式开关**：`common.glsl` 共享 uniform `uFx`，dials = 1 / collider = 0，三处材质同一引用
+- **深度雾**：`points.frag.glsl` 两条渲染路径都接入，远处 0.70×、近处 1.12×；`uFx = 0` 时恒为 1，力场碰撞逐像素不变
+- **错误可视化**：`main.ts` 把 JS 异常与着色器编译错误显示为底部红条
+
+### 4.7 改动量对照
 
 | 文件 | 上游 | 本项目 | 变化 |
 |---|---|---|---|
 | `src/sim/shaders/velocity.frag.glsl` | 12,408 B | **20,108 B** | +62% |
-| `src/sim/shaders/points.frag.glsl` | 8,220 B | **12,026 B** | +46% |
+| `src/sim/shaders/points.frag.glsl` | 8,220 B | **12,723 B** | +55% |
 | `src/sim/shaders/points.vert.glsl` | 2,895 B | **3,651 B** | +26% |
-| `src/sim/ParticleSystem.ts` | 15,543 B | **15,880 B** | +2% |
-| `src/sim/StateMachine.ts` | 14,973 B | **15,959 B** | +7% |
+| `src/sim/ParticleSystem.ts` | 15,543 B | **16,000 B** | +3% |
+| `src/sim/StateMachine.ts` | 14,973 B | **16,111 B** | +8% |
 | `src/config.ts` | 5,575 B | **5,929 B** | +6% |
-| `src/main.ts` | 11,722 B | **11,888 B** | +1% |
-| `src/sim/shaders/common.glsl` | 不存在 | **1,427 B** | 新增 |
+| `src/main.ts` | 11,722 B | **13,236 B** | +13% |
+| `src/sim/shaders/common.glsl` | 不存在 | **1,604 B** | 新增 |
 | `index.html` | 原版英文 | 中文标题 + meta | 重写 |
 
 ---

@@ -83,6 +83,9 @@ Integrates velocity into position with clamped delta time.
 - Point size attenuates with depth
 - Color from a 3-stop gradient keyed by particle speed
 - Palette uniforms cross-fade as the left-hand dial moves
+- Dials mode adds a depth-fog term (`uFx`-gated): far particles dim to 0.70x, near ones lift to 1.12x
+- `uFx` is a shared uniform (dials = 1, collider = 0), so collider rendering stays pixel-identical
+- Runtime errors (JS exceptions and shader compile failures) surface as a bottom bar, not a black screen
 
 ## Interaction model
 
