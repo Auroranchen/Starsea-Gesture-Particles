@@ -3,6 +3,16 @@
 uniform float uPulsePeriod;
 uniform float uPulseGroups;
 uniform float uPulseFocus;
+// Galaxy fist: 0..1 fusion into the solid star. Ocean fist: 0..1 aurora.
+uniform float uForge;
+uniform float uForgeRadius;
+uniform float uAurora;
+uniform float uAuroraFraction;
+uniform float uAuroraHeight;
+uniform float uOceanRadius;
+
+// 1 for the share of ocean particles that become aurora, else 0.
+float auroraSel(float seed) { return step(fract(sin(seed * 5.71) * 43758.5453123), uAuroraFraction); }
 
 float hash11(float n) { return fract(sin(n) * 43758.5453123); }
 
