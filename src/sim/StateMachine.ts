@@ -18,6 +18,10 @@ export class StateMachine {
   dial = 0;
   /** Heart scene: 0..1 pulse envelope, also read by main for bloom kicks. */
   beat = 0;
+  /** Galaxy fist: 0..1 fusion into the solid glittering star. */
+  forge = 0;
+  /** Ocean fist: 0..1 aurora storm. */
+  aurora = 0;
   private beatPhase = 0;
 
   private colorA = new THREE.Color();
@@ -103,7 +107,21 @@ export class StateMachine {
     velUniforms.uExpansionRadius.value = lerp(1.4, 3.6, expansion);
     const blackHoleCenter = frame.right?.position ?? frame.left?.position ?? new THREE.Vector3();
     (velUniforms.uBlackHoleCenter.value as THREE.Vector3).lerp(blackHoleCenter, Math.min(dt * 8, 1));
-    velUniforms.uBlackHoleStrength.value = (this.scene === 'galaxy' ? blackHole : 0) * (2.2 + this.energy * 2.8);
+    // Galaxy fist now forges a solid star; ocean fist raises an aurora.
+    const forge = this.scene === 'galaxy' ? THREE.MathUtils.smoothstep(d, 0.05, 0.85) : 0;
+    // Either hand making a fist (blackHole = single-hand fist strength) triggers it.
+    const aurora = this.scene === 'ocean' ? Math.max(d, this.fist, blackHole) : 0;
+    this.forge = forge;
+    velUniforms.uForge.value = forge;
+    velUniforms.uForgeRadius.value = CONFIG.galaxy.forgeRadius;
+    const ak = Math.min(dt * CONFIG.ocean.auroraSmoothing, 1);
+    this.aurora += (aurora - this.aurora) * ak;
+    velUniforms.uAurora.value = this.aurora;
+    velUniforms.uAuroraFraction.value = CONFIG.ocean.auroraFraction;
+    velUniforms.uAuroraHeight.value = CONFIG.ocean.auroraHeight;
+    velUniforms.uOceanRadius.value = CONFIG.ocean.containRadius;
+    velUniforms.uBlackHoleStrength.value =
+      (this.scene === 'galaxy' ? blackHole : 0) * (2.2 + this.energy * 2.8) * (1 - forge);
     velUniforms.uBlackHoleRadius.value = lerp(0.28, 0.85, blackHole);
     (velUniforms.uGravityCenter.value as THREE.Vector3).lerp(frame.gravityCenter, Math.min(dt * 7, 1));
     (velUniforms.uGravityAxis.value as THREE.Vector3).lerp(frame.gravityAxis, Math.min(dt * 7, 1)).normalize();
@@ -284,7 +302,7 @@ export class StateMachine {
       1,
     );
     colorUniforms.uBlackHoleVisual.value = this.scene === 'galaxy'
-      ? THREE.MathUtils.clamp(Math.max(d, blackHole), 0, 1)
+      ? THREE.MathUtils.clamp(Math.max(d, blackHole), 0, 1) * (1 - this.forge)
       : 0;
   }
 
