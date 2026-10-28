@@ -30,7 +30,7 @@ export class StartScreen {
         <main class="start-main">
           <section class="start-copy" aria-labelledby="start-title">
             <p class="start-kicker"><span aria-hidden="true"></span> REALTIME SPATIAL EXPERIMENT</p>
-            <h1 id="start-title">传智杯：<span>智控星海</span></h1>
+            <h1 id="start-title">传智杯：<br><span>智控星海</span></h1>
             <p class="start-description">
               用手势或鼠标塑造 GPU 粒子场。张开手掌让星云舒展，握拳让能量聚拢，在 Nebula、Galaxy、Ocean、Saturn、Heart 与 Pulse 六种实时场景之间切换。
             </p>
@@ -88,8 +88,8 @@ export class StartScreen {
             <div class="scene-index" aria-label="可用场景">
               <span class="scene-index-title">SCENE INDEX</span>
               <span class="scene-index-item active"><b>01</b> NEBULA <em>cloud / ball</em></span>
-              <span class="scene-index-item"><b>02</b> GALAXY <em>orbit / collapse</em></span>
-              <span class="scene-index-item"><b>03</b> OCEAN <em>calm / storm</em></span>
+              <span class="scene-index-item"><b>02</b> GALAXY <em>orbit / star forge</em></span>
+              <span class="scene-index-item"><b>03</b> OCEAN <em>calm / aurora</em></span>
               <span class="scene-index-item"><b>04</b> SATURN <em>orbit / rings</em></span>
               <span class="scene-index-item"><b>05</b> HEART <em>heartbeat / dark core</em></span>
               <span class="scene-index-item"><b>06</b> PULSE <em>fireworks / ion pulse</em></span>

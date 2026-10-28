@@ -31,7 +31,8 @@ export class Overlay {
   private energyFillEl: HTMLElement;
   private gatherEl: HTMLElement;
   private gatherLabelEl: HTMLElement;
-  private handsEl: HTMLElement;
+  private handLDotEl: HTMLElement;
+  private handRDotEl: HTMLElement;
   private posesEl: HTMLElement;
   private trackingEl: HTMLElement;
   private helpEl: HTMLElement;
@@ -49,17 +50,33 @@ export class Overlay {
     this.element.className = 'overlay';
     this.element.innerHTML = `
       <div class="hud" data-role="hud">
-        <div class="hud-row"><span class="hud-label">fps</span><span data-role="fps">--</span></div>
-        <div class="hud-row"><span class="hud-label">particles</span><span data-role="count">--</span></div>
-        <div class="hud-row"><span class="hud-label">input</span><span data-role="mode">mouse</span></div>
-        <div class="hud-row"><span class="hud-label">scene</span><span data-role="scene">nebula</span></div>
-        <div class="hud-row"><span class="hud-label">state</span><span data-role="state" class="hud-state">drift</span></div>
-        <div class="hud-row"><span class="hud-label">energy</span><span data-role="energy">0%</span></div>
-        <div class="hud-meter"><span data-role="energy-fill"></span></div>
-        <div class="hud-row"><span class="hud-label" data-role="gather-label">ball</span><span data-role="gather">0%</span></div>
-        <div class="hud-row"><span class="hud-label">hands</span><span data-role="hands">L · / R ·</span></div>
-        <div class="hud-row"><span class="hud-label">pose</span><span data-role="poses">neutral / neutral</span></div>
-        <div class="hud-row"><span class="hud-label">tracking</span><span data-role="tracking">mouse</span></div>
+        <div class="hud-head">
+          <span class="hud-scene-badge" data-role="scene">NEBULA</span>
+          <span class="hud-state-chip" data-role="state">drift</span>
+        </div>
+        <div class="hud-energy-block">
+          <div class="hud-energy-row">
+            <span class="hud-label">ENERGY</span>
+            <span class="hud-energy-val" data-role="energy">0%</span>
+          </div>
+          <div class="hud-bar"><span class="hud-bar-fill" data-role="energy-fill"></span></div>
+        </div>
+        <div class="hud-grid">
+          <span class="hud-label">FPS</span><span class="hud-val" data-role="fps">--</span>
+          <span class="hud-label">PARTICLES</span><span class="hud-val" data-role="count">--</span>
+          <span class="hud-label">INPUT</span><span class="hud-val" data-role="mode">mouse</span>
+          <span class="hud-label" data-role="gather-label">DIAL</span><span class="hud-val" data-role="gather">0%</span>
+        </div>
+        <div class="hud-divider"></div>
+        <div class="hud-hands-row">
+          <span class="hud-hand" data-role="hand-l"><span class="hud-hand-dot" data-hand="l"></span>L</span>
+          <span class="hud-hand-sep"></span>
+          <span class="hud-hand" data-role="hand-r"><span class="hud-hand-dot" data-hand="r"></span>R</span>
+        </div>
+        <div class="hud-grid">
+          <span class="hud-label">POSE</span><span class="hud-val hud-val-small" data-role="poses">neutral / neutral</span>
+          <span class="hud-label">TRACKING</span><span class="hud-val" data-role="tracking">mouse</span>
+        </div>
         <div class="hud-keys">? help &middot; s settings &middot; p camera view</div>
       </div>
       <div class="panel help hidden" data-role="help">
@@ -126,7 +143,8 @@ export class Overlay {
     this.energyFillEl = this.q('[data-role="energy-fill"]');
     this.gatherEl = this.q('[data-role="gather"]');
     this.gatherLabelEl = this.q('[data-role="gather-label"]');
-    this.handsEl = this.q('[data-role="hands"]');
+    this.handLDotEl = this.q('[data-hand="l"]');
+    this.handRDotEl = this.q('[data-hand="r"]');
     this.posesEl = this.q('[data-role="poses"]');
     this.trackingEl = this.q('[data-role="tracking"]');
     this.helpEl = this.q('[data-role="help"]');
@@ -294,7 +312,12 @@ export class Overlay {
     (this.energyFillEl as HTMLElement).style.width = `${energyValue * 100}%`;
     this.energyFillEl.style.background = accent;
     this.gatherEl.textContent = `${Math.round(clamp01(gather) * 100)}%`;
-    this.handsEl.textContent = `L ${leftActive ? '\u25cf' : '\u00b7'} / R ${rightActive ? '\u25cf' : '\u00b7'}`;
+    this.handLDotEl.classList.toggle('active', leftActive);
+    this.handRDotEl.classList.toggle('active', rightActive);
+    if (leftActive) this.handLDotEl.style.background = accent;
+    else this.handLDotEl.style.background = '';
+    if (rightActive) this.handRDotEl.style.background = accent;
+    else this.handRDotEl.style.background = '';
     this.posesEl.textContent = `${leftPose} / ${rightPose}`;
     this.trackingEl.textContent = leftActive || rightActive ? 'locked' : mode.includes('hand') ? 'lost' : 'mouse';
     this.trackingEl.style.color = leftActive || rightActive ? accent : '';

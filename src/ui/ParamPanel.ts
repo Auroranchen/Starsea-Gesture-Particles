@@ -55,6 +55,7 @@ const GROUPS: Group[] = [
       { path: 'galaxy.sunRadius', label: 'sun radius', min: 0.1, max: 0.8, step: 0.01 },
       { path: 'galaxy.holeRadius', label: 'hole radius', min: 0.1, max: 0.9, step: 0.01 },
       { path: 'galaxy.coreGlow', label: 'core glow', min: 0, max: 1.5, step: 0.02 },
+      { path: 'galaxy.forgeRadius', label: 'star forge · radius', min: 0.3, max: 2, step: 0.05 },
     ],
   },
   {
@@ -66,6 +67,8 @@ const GROUPS: Group[] = [
       { path: 'ocean.waveFreqStorm', label: 'wave freq · storm', min: 0.5, max: 5, step: 0.05 },
       { path: 'ocean.turbulenceStorm', label: 'turbulence · storm', min: 0, max: 3, step: 0.05 },
       { path: 'ocean.stiffness', label: 'stiffness', min: 0.5, max: 8, step: 0.1 },
+      { path: 'ocean.auroraFraction', label: 'aurora · particle share', min: 0, max: 0.5, step: 0.01 },
+      { path: 'ocean.auroraHeight', label: 'aurora · height', min: 0.1, max: 1.2, step: 0.05 },
     ],
   },
   {

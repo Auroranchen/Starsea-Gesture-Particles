@@ -293,7 +293,7 @@ function frame(): void {
   for (const event of stateMachine.consumeEvents()) {
     const messages: Record<string, string> = {
       burst: 'Burst field released',
-      'collapse-start': 'Black hole collapse engaged',
+      'collapse-start': 'Star forge engaged',
       'gravity-start': 'Dual-hand gravity engaged',
     };
     overlay.toast(messages[event]);
@@ -335,7 +335,14 @@ function frame(): void {
 
   particles.updateRuntimeParams();
   particles.update(dt);
-  centerStar.update(dt, stateMachine.dial, stateMachine.energy, currentScene === 'galaxy');
+  // While the galaxy is forging a solid star, keep the core a bright sun
+  // instead of letting it turn into the black hole.
+  centerStar.update(
+    dt,
+    stateMachine.dial * (1 - stateMachine.forge),
+    stateMachine.energy,
+    currentScene === 'galaxy',
+  );
   webcamPanel.update();
   sampleFps(now);
   const baseMode = usingHands ? 'hand' : input.mode === 'hand' ? 'hand·lost' : 'mouse';
