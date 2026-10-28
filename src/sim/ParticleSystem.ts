@@ -33,6 +33,12 @@ export class ParticleSystem {
     uBeat: { value: 0 },
     uBeatPhase: { value: 0 },
     uHaloFraction: { value: CONFIG.heart.haloFraction },
+    uForge: { value: 0 },
+    uForgeRadius: { value: CONFIG.galaxy.forgeRadius },
+    uAurora: { value: 0 },
+    uAuroraFraction: { value: CONFIG.ocean.auroraFraction },
+    uAuroraHeight: { value: CONFIG.ocean.auroraHeight },
+    uOceanRadius: { value: CONFIG.ocean.containRadius },
   };
 
   constructor(renderer: THREE.WebGLRenderer, size: number, scene: SceneId) {
@@ -159,6 +165,7 @@ export class ParticleSystem {
       uniforms: {
         ...this.shared,
         uRainbow: { value: 0 },
+        uDensityNorm: { value: 65536 / this.count },
         uPositions: { value: null },
         uVelocities: { value: null },
         uPointSize: { value: CONFIG.pointSize },
