@@ -1,89 +1,340 @@
+# 智控星海 · StarSea
 
-A gesture-controlled GPU particle simulator that runs entirely in your
-browser. Just a webcam (or a mouse).
+> 用手势驾驭星空的实时粒子实验室 —— 面向天文科普教学的零接触交互可视化工具
 
-Inspired by David Katz's MediaPipe + Three.js particle sim featured on
-[80 Level](https://80.lv/articles/impressive-particle-simulator-controlled-by-hand-gestures).
+基于 WebGL2 的 GPGPU 粒子模拟，全部在浏览器本地运行。一台摄像头（或一只鼠标）即可驱动
+六个天体场景：星云、星系、粒子地球、土星环、心跳、离子脉冲。
 
+---
 
-## Quick start
+## 目录
 
-On Windows, just double-click **`start.bat`** — it installs dependencies on the
-first run and opens the app in your browser. Otherwise:
+- [项目定位](#项目定位)
+- [10 分钟极速复现指南](#10-分钟极速复现指南)
+- [功能一览](#功能一览)
+- [交互方式](#交互方式)
+- [六个场景与对应知识点](#六个场景与对应知识点)
+- [技术栈](#技术栈)
+- [项目结构](#项目结构)
+- [配置与环境变量](#配置与环境变量)
+- [性能与质量档位](#性能与质量档位)
+- [故障排查](#故障排查)
+- [开源来源与原创性声明](#开源来源与原创性声明)
+- [许可证](#许可证)
+
+---
+
+## 项目定位
+
+**痛点**：天文与物理课堂上有大量"看不见的过程"——引力坍缩、星系旋臂、行星环缝、极光成因、
+心跳节律。PPT 讲不清，视频只能单向播放，学生无法"把手伸进去"改变参数。
+
+**解法**：把抽象概念做成**可被手势实时操控的粒子场**。老师张开手掌，星云就弥散；握拳，
+星云收束成一颗致密星球；双拳合拢，星系熔铸成一颗恒星。每一个手势对应一个物理量的改变，
+学生看到的是"变量 → 形态"的因果链，而不是一张静态图。
+
+**为什么是手势而不是鼠标**：这是本项目的核心取舍。课堂场景中，老师站在投影前讲课，
+频繁回到讲台操作鼠标会打断节奏；而摄像头 + 手势可以让他**站在原地、面对学生**完成演示。
+鼠标模式作为兜底完整保留（无摄像头、光线不足、多人遮挡时自动可用），保证工具在任何教室都能用。
+
+---
+
+## 10 分钟极速复现指南
+
+### 环境要求
+
+| 项 | 要求 | 说明 |
+|---|---|---|
+| 操作系统 | Windows 10/11、macOS 12+、Linux（主流发行版） | 纯前端，无平台依赖 |
+| Node.js | **≥ 18**（推荐 20 LTS 或 22） | 仅构建期需要，运行时不需要 |
+| 包管理器 | npm ≥ 9（随 Node 附带） | 使用 `package-lock.json`，建议 `npm ci` |
+| 浏览器 | **Chrome / Edge 113+**（首选）、Firefox 115+、Safari 16.4+ | **必须支持 WebGL2** |
+| 显卡 | 支持 WebGL2 的独显或近五年核显 | 核显建议使用 `low`/`med` 档 |
+| 摄像头 | 720p 及以上，**可选** | 无摄像头时用鼠标模式 |
+| 网络 | 首次运行需联网 | 仅用于下载 npm 依赖与 MediaPipe 模型/WASM（来自 CDN），之后可离线 |
+
+### 复现步骤
+
+**方式 A：Windows 一键启动（推荐）**
+
+```
+双击 start.bat
+```
+
+脚本会自动检测 Node 环境 → 首次运行时执行 `npm install` → 启动开发服务器 → 打开浏览器。
+
+**方式 B：命令行（跨平台）**
 
 ```bash
-npm install
+# 1. 安装依赖（首次约 1–3 分钟，取决于网络）
+npm ci
+
+# 2. 启动开发服务器
 npm run dev
+
+# 3. 终端会打印形如 http://localhost:5173/ 的地址，在浏览器中打开
 ```
 
-Open the printed localhost URL. Video is processed on-device by
-MediaPipe.
+**方式 C：构建静态产物**
 
-## Controls
-
-Each hand is an independent continuous controller:
-
-| Controllers | Hand | Mouse | Effect |
-| --- | --- | --- | --- |
-| Action controller | LEFT hand: open ↔ closed | Hold/release left button (wheel parks it) | Action depends on the scene (see below) |
-| Rotate | Left hand: drag anywhere | Right-drag or Space-drag | Trackball with inertia, spin and tilt the whole field |
-| Energy | Based on hand's speed | Cursor speed | Brightens the fastest particles |
-| Colliders | (Additional Gesture mode. Press C key to swap back and forth) Based on both hands position | Cursor position | Collides with particles |
-
-### Scenes (cycle with **G**, or pick in Settings)
-
-| Scene | LEFT hand open | LEFT hand closed |
-| --- | --- | --- |
-| **nebula** | dispersed turbulent cloud | tight, dense, glowing ball |
-| **galaxy** | a calm spiral disc around a bright simmering **sun** | a gravitational **collapse**. The sun extinguishes into a pitch-black **black hole** with a white-hot Fresnel photon ring, the disc contracts, and orbits speed up |
-| **ocean** | glassy, gently rolling swells | a raging storm of steep, chaotic, white-capped waves |
-
-Note: MediaPipe labels hands from the unmirrored camera frame, so roles are
-mirror-corrected by default. if left/right feel swapped on your setup, flip
-`mirrorHandedness` in `src/config.ts`.
-
-Keyboard: `?` help · `S` settings · `H` hide HUD · `P` webcam panel ·
-`R` reset particles · `Esc` menu.
-
-## How it works
-
-```
-Webcam ──▶ MediaPipe HandLandmarker (30 Hz, off the render loop)
-              │ 21 landmarks/hand
-              ▼
-        One Euro filter + gesture classifier (pinch/palm/fist, hysteresis)
-              ▼
-        InputManager ──▶ StateMachine (formation + palette targets, 1 s morph)
-              ▼
-        GPGPU sim: velocity & position live in float textures,
-        ping-ponged through two fragment passes
-        (formation spring + curl noise + force ball + damping)
-              ▼
-        THREE.Points (1 vertex per texel) ──▶ UnrealBloom ──▶ screen
+```bash
+npm run build      # 输出到 dist/，base 为相对路径，可直接部署到任意静态托管
+npm run preview    # 本地预览构建结果
 ```
 
-## Tuning
+### 首次使用流程
 
-Every constant like spring stiffness, damping, wave amplitude, palettes, bloom,
-gesture thresholds, One Euro parameters, lives in
-[`src/config.ts`](src/config.ts) with comments. Start there.
+1. 浏览器打开后进入**启动页**，选择 `摄像头模式` 或 `鼠标模式`；
+2. 摄像头模式会请求权限，允许后等待 1–2 秒模型加载（页面右下角有状态提示）；
+3. 把手抬到镜头前约 40–80 cm，画面出现手部光标即可开始；
+4. 按 `G` 循环切换六个场景，或按 `S` 打开设置面板挑选场景。
 
-Quality tiers set the simulation texture size: low = 65k particles (256²),
-med = 262k (512²), high = 1M (1024²). The app auto-drops a tier if the first
-three seconds run under 45 fps.
+### 验证清单（确认复现成功）
 
-## Documentation
+| # | 操作 | 预期结果 |
+|---|---|---|
+| 1 | 打开页面 | 出现启动页，无黑屏、无控制台报错 |
+| 2 | 选鼠标模式 → 按住左键 | 星云向中心收束成球，松开回弹为云 |
+| 3 | 按 `G` | 场景依次切换，左上角 HUD 场景名同步变化 |
+| 4 | 右键拖拽 | 整个粒子场跟随旋转，松手后带惯性衰减 |
+| 5 | 按 `S` | 设置面板打开，可调画质/泛光/粒子大小 |
+| 6 | 摄像头模式举手 | 出现手部标记，开合手掌驱动形态变化 |
+| 7 | 按 `H` | HUD 隐藏/显示 |
+| 8 | 按 `Esc` | 返回启动页，摄像头释放（指示灯熄灭） |
 
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — system design, data flow, GPGPU pipeline, extension guide
+> 若第 2 步无反应，先检查浏览器控制台是否有 `WebGL2 unavailable` 提示，见[故障排查](#故障排查)。
 
+---
 
-## Troubleshooting
-- **Low FPS** — drop quality in settings (`S`), disable bloom, or close other
-  GPU-heavy tabs. Integrated GPUs are happiest at low/med.
-- **Black screen** — the app requires WebGL2. Check `chrome://gpu` for
-  blocklisted drivers.
+## 功能一览
 
-## License
+- **六个天体场景**，共享同一套 GPGPU 引擎，切换时重新播种而非重建纹理
+- **双输入**：MediaPipe 手部 21 关键点追踪 / 完整鼠标与键盘替代方案
+- **两种交互模式**：`dials`（连续调节盘）与 `collider`（手部作为力场球），`C` 键切换
+- **连续量驱动**：手势不是离散的"识别成某个手势"，而是映射为 0→1 的连续控制量，避免跳变
+- **最高 100 万粒子**实时模拟（1024² 纹理），三档质量自动降级
+- **泛光后期**（UnrealBloom），心跳场景的泛光强度随心跳脉冲
+- **实时参数面板**：所有物理常量可在运行时调整并即时生效
+- **故障自愈**：手势丢失有 300ms 淡出 + 1000ms 归位；FPS 持续低于 45 自动降档
+- **无后端**：视频帧不上传，全部本地处理
 
-MIT. The simplex-noise GLSL is by Ian McEwan / Ashima Arts (public domain,
-[webgl-noise](https://github.com/ashima/webgl-noise)).
+---
+
+## 交互方式
+
+### 键盘
+
+| 键 | 功能 |
+|---|---|
+| `G` | 循环切换场景 |
+| `S` | 打开/关闭设置面板 |
+| `H` | 隐藏/显示 HUD |
+| `P` | 显示/隐藏摄像头预览窗 |
+| `R` | 重置粒子（重新播种） |
+| `C` | 切换 `dials` / `collider` 交互模式 |
+| `?` 或 `/` | 帮助浮层 |
+| `Esc` | 断开摄像头、返回启动页 |
+
+### 手部
+
+每只手都是一个独立控制器：
+
+| 控制量 | 手势 | 作用 |
+|---|---|---|
+| 调节盘（dial） | 左手**握拳程度**（连续） | 驱动当前场景的形态轴（见下表） |
+| 旋转 | 右手**位移** | 带动整个粒子场做带惯性的轨迹球旋转 |
+| 能量（energy） | 手部**移动速度** | 提亮运动最快的粒子，并放大湍流 |
+| 扩散（expansion→burst） | 双手**张开程度** | 释放冲击波，把粒子推开 |
+| 引力（gravity） | 双手**距离变化速度** | 以双手中点为引力中心，双手中点连线为引力轴 |
+| 力场球（collider） | `collider` 模式下手的**位置** | 手掌作为一个带速度的排斥球推动粒子 |
+
+### 鼠标
+
+| 操作 | 动作 | 作用 |
+|---|---|---|
+| 按住左键 | 握拳 | 驱动调节盘 |
+| 右键拖拽 / `Space` + 拖拽 | 右手位移 | 旋转 |
+| 光标移动速度 | 手速 | 能量 |
+| 滚轮 | — | 把"按住左键"的状态锁存（便于演示） |
+
+---
+
+## 六个场景与对应知识点
+
+| # | 场景 | 手势 0（张开） | 手势 1（握拳） | 对应知识点 |
+|---|---|---|---|---|
+| 1 | `nebula` 星云 | 稀疏湍流的星际云 | 收束成致密发光球体 | 分子云、引力收束、恒星诞生前夜 |
+| 2 | `galaxy` 星系 | 平静旋臂 + 明亮恒星核心 | **星锻**：旋臂向内螺旋熔铸成致密发光球 | 旋臂密度波、开普勒差速旋转、引力坍缩 |
+| 3 | `ocean` 粒子地球 | 自转的粒子地球（海洋/陆地/云/大气） | **极光风暴**：极区粒子抬升成绿→品红极光幕 | 地球自转、极光成因、磁层与太阳风 |
+| 4 | `saturn` 土星 | 平静环系，开普勒轨道 | 环面隆起、湍流增强、向内坍缩 | 行星环结构、卡西尼缝、开普勒第三定律 |
+| 5 | `heart` 心跳 | 62 BPM 的缓慢心跳 | 128 BPM 收缩的"暗核"，冲击波增强 | 心肌收缩节律、搏动波传播 |
+| 6 | `pulse` 离子脉冲 | 弹道式礼花，逐组点火 | 离子环：向心汇聚、压成环状冲击波 | 抛体运动、引力回落、环形波 |
+
+> 每个场景的"手势 0/1"不是两个固定形态，而是**一条连续插值轴**——中间任何开合程度都对应
+> 一个真实的中间状态，这正是"变量 → 形态"的直观演示。
+
+---
+
+## 技术栈
+
+| 层 | 选型 | 版本 | 用途 |
+|---|---|---|---|
+| 渲染 | [three.js](https://threejs.org/) | ^0.166.0 | WebGL 渲染、后期处理、GPGPU 计算器 |
+| 手部识别 | [@mediapipe/tasks-vision](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker) | ^0.10.14 | HandLandmarker（21 关键点，GPU delegate） |
+| 语言 | TypeScript | ^5.5.0 | 全量类型检查，构建前 `tsc` 强制通过 |
+| 构建 | [Vite](https://vite.dev/) | ^5.3.0 | 开发服务器、GLSL 内联（`?raw`）、产物构建 |
+
+**无运行时后端、无数据库、无服务端 API、无第三方业务接口。**
+
+---
+
+## 项目结构
+
+```
+.
+├── index.html                  # 入口，标题与 meta 描述
+├── src/
+│   ├── main.ts                 # 应用装配：渲染器、后期、主循环、事件绑定
+│   ├── config.ts               # 单一事实源：所有可调常量（213 行）
+│   ├── style.css               # HUD / 面板 / 启动页样式
+│   ├── input/
+│   │   ├── HandTracker.ts      # MediaPipe 封装、30Hz 抽帧、幻影剔除、深度估计
+│   │   ├── InputManager.ts     # 手/鼠标统一为 GestureFrame
+│   │   ├── GestureClassifier.ts# 掌心/握拳/捏合的滞回分类
+│   │   ├── MouseInput.ts       # 鼠标兜底
+│   │   └── (One Euro 滤波)      # src/utils/OneEuroFilter.ts
+│   ├── sim/
+│   │   ├── ParticleSystem.ts   # GPGPU 双纹理 ping-pong、播种、材质
+│   │   ├── StateMachine.ts     # 场景插值、调色板、事件、力场球驱动
+│   │   ├── CenterStar.ts       # 星系核心恒星 / 黑洞网格
+│   │   └── shaders/
+│   │       ├── common.glsl     # 着色器公共库（噪声/映射/工具）
+│   │       ├── velocity.frag.glsl  # 548 行：六个场景的力场
+│   │       ├── position.frag.glsl  # 速度积分
+│   │       ├── points.vert.glsl    # 点精灵顶点
+│   │       ├── points.frag.glsl    # 259 行：六场景着色与星芒
+│   │       └── star.*.glsl         # 核心恒星
+│   ├── ui/
+│   │   ├── Overlay.ts          # HUD、设置、帮助、Toast
+│   │   ├── StartScreen.ts      # 启动页、模式选择
+│   │   ├── ParamPanel.ts       # 运行时参数面板
+│   │   └── WebcamPanel.ts      # 摄像头预览
+│   └── utils/
+│       └── OneEuroFilter.ts    # 一欧元滤波（3 通道）
+├── docs/
+│   └── ARCHITECTURE.md         # 架构说明（英文）
+├── prompts/                    # AI 协同开发的 Prompt 历史快照
+├── .github/workflows/deploy.yml# GitHub Pages 自动部署
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+└── start.bat                   # Windows 一键启动
+```
+
+---
+
+## 配置与环境变量
+
+### 环境变量
+
+**本项目不需要任何环境变量。**
+
+原因：纯前端应用，没有服务端、没有数据库、没有需要密钥的第三方 API。MediaPipe 的 WASM
+与模型文件通过公开 CDN 加载（地址硬编码在 `src/input/HandTracker.ts` 顶部），无需凭据。
+
+为满足赛事对"环境变量模板"的规范要求，同时保持零配置启动，仓库约定：**若未来引入需要
+凭据的能力（如云端模型推理），按以下模板新增 `.env.example`，且只提交 `.env.example`，
+`.env` 已在 `.gitignore` 中忽略**：
+
+```dotenv
+# —— .env.example（当前项目暂未使用，仅为扩展预留）——
+# 复制为 .env 后填写；Vite 仅暴露 VITE_ 前缀的变量到客户端
+# VITE_INFERENCE_ENDPOINT=https://example.com/api
+# VITE_INFERENCE_TOKEN=
+```
+
+> ⚠️ 安全提示：任何写进 `VITE_` 前缀的变量都会被打包进客户端产物，**不可用于存放置信密钥**。
+
+### 运行时可调参数
+
+所有物理与视觉常量集中在 [`src/config.ts`](src/config.ts)，每一项都有注释。修改后热更新
+即可看到效果，无需改动着色器。常用入口：
+
+| 想调什么 | 改哪里 |
+|---|---|
+| 粒子数 / 画质档位 | `QUALITY_SIZES` |
+| 手势灵敏度 | `CONFIG.oneEuro`、`CONFIG.fingerExtendedRatio` |
+| 左右手镜像 | `CONFIG.mirrorHandedness` |
+| 各场景形态、颜色 | `CONFIG.<scene>`、`CONFIG.scenePalettes` |
+| 泛光 | `CONFIG.bloom` |
+| 自动降档阈值 | `CONFIG.fpsDowngradeBelow`、`CONFIG.fpsSampleSeconds` |
+
+---
+
+## 性能与质量档位
+
+| 档位 | 模拟纹理 | 粒子数 | 建议硬件 |
+|---|---|---|---|
+| `low` | 256² | 65,536 | 核显 / 老笔记本 |
+| `med`（默认） | 512² | 262,144 | 主流独显 / 近五年核显 |
+| `high` | 1024² | 1,048,576 | 中高端独显 |
+
+**自动降级**：启动后持续采样帧率（每 500ms 统计一次），若连续 3 秒低于 45 FPS，
+自动下降一档并弹出提示。降级只触发一次，避免来回抖动。
+
+**显存兼容**：若设备不支持 `EXT_color_buffer_float`，自动回退到 `HalfFloatType` 纹理。
+
+> 具体帧率、延迟等实测数据见《实测记录表》。本文档不提供未测量的性能数字。
+
+---
+
+## 故障排查
+
+| 现象 | 原因 | 处理 |
+|---|---|---|
+| 白屏 / 黑屏，控制台报 `WebGL2 unavailable` | 浏览器或显卡不支持 WebGL2 | 打开 `chrome://gpu` 检查；更新显卡驱动；换 Chrome/Edge |
+| 帧率很低 | 画质过高、泛光开销大、后台占用 GPU | 按 `S` 降到 `low`；关闭泛光；关闭其他 GPU 标签页 |
+| 摄像头无画面 | 权限被拒 / 被其他程序占用 | 浏览器地址栏允许摄像头；关闭腾讯会议等占用程序 |
+| 手部识别断续 | 光线不足、手离镜头太近或太远、背景杂乱 | 补正面光；手距 40–80cm；简化背景 |
+| 左右手反了 | MediaPipe 按未镜像画面标注左右手 | 把 `CONFIG.mirrorHandedness` 取反 |
+| 模型长时间加载不出来 | CDN 被拦截 | 检查网络；或参考 `HandTracker.ts` 顶部的 `WASM_CDN` / `MODEL_URL` 换源 |
+| 切场景后画面卡住 | 显存不足 | 降低画质档位后按 `R` 重置 |
+
+---
+
+## 开源来源与原创性声明
+
+本项目**不是从零开始的原创项目**，也不隐瞒这一点。它是一个开源项目的二次开发成果，
+在此完整披露：
+
+### 上游
+
+- **原始项目**：`gesture-particles`，作者 **William Larskog**，许可证 **MIT**
+  （`LICENSE` 文件原样保留，版权声明未删除）。
+- **灵感来源**：David Katz 的 MediaPipe + Three.js 粒子模拟器。
+- **第三方着色器**：GLSL 单纯形噪声（simplex noise）来自 Ian McEwan / Ashima Arts 的
+  [webgl-noise](https://github.com/ashima/webgl-noise)，公有领域。
+
+### 本项目的实质性改动
+
+以下改动均可在 Git 提交历史中逐条溯源：
+
+| 类别 | 内容 |
+|---|---|
+| **新增场景** | `saturn`（土星环：卡西尼缝、开普勒轨道、局部坐标系求解）、`heart`（心跳：lub-dub 双峰包络、暗物质环、搏动冲击波）、`pulse`（离子脉冲：分组点火的弹道礼花、离子环向心汇聚）——**上游仅有 nebula / galaxy / ocean 三个场景** |
+| **重写场景** | `ocean` 由"平面波浪"重写为"粒子地球 + 极光风暴"：球面均匀采样、经纬度感知自转、极区极光幕抬升 |
+| **重做机制** | `galaxy` 的"黑洞坍缩"改为"星锻（star forge）"：旋臂向内螺旋熔铸成致密发光球，含 4 点星芒闪烁 |
+| **架构重构** | 抽取 `common.glsl` 着色器公共库；`velocity.frag.glsl` 从 12.4KB 扩展到 20.1KB，新增 6 个 `*Force()` 函数 |
+| **视觉效果** | 六套独立调色板与着色分支、泛光随心跳脉冲、点精灵星芒、密度归一化（`uDensityNorm`）保证不同画质下亮度一致 |
+| **产品化** | 全站中文化与品牌重命名（"智控星海"）、启动页模式选择、Toast 状态反馈、HUD、帮助浮层 |
+| **工程化** | 严格 TypeScript 类型检查（`tsc --noEmit` 零错误）、GitHub Pages 自动部署 |
+
+> 更详细的逐项说明见 [`ORIGINALITY.md`](ORIGINALITY.md)，AI 协同开发过程见 [`prompts/`](prompts/)。
+
+---
+
+## 许可证
+
+MIT。保留上游版权声明，详见 [`LICENSE`](LICENSE)。
+
+若你希望复用本项目，请同样保留上游客与许可证声明。
