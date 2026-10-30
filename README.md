@@ -79,9 +79,19 @@
 
 ### 复现步骤（Windows：双击即可）
 
-**唯一必要步骤：双击仓库根目录的 `start.bat`。**
+**唯一必要步骤：双击 `start.bat`。它就在仓库根目录下，和 `package.json`、`src/` 同级：**
 
-脚本会自动完成四件事：
+```
+Starsea-Gesture-Particles\
+├── start.bat          ← 双击这个
+├── package.json
+├── index.html
+└── src\
+```
+
+> 若拿到的是压缩包，请先**完整解压**再双击；在压缩包预览窗口里直接双击会失败。
+
+双击后脚本自动完成四件事：
 
 1. 检查 Node.js —— 没装会提示去 [nodejs.org](https://nodejs.org) 装 LTS 版；
 2. 首次运行时自动 `npm install` 安装依赖（约 1–3 分钟，取决于网络）；
