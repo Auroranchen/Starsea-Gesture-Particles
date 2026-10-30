@@ -21,6 +21,7 @@
 本项目针对的正是课堂上讲不清的那类内容——引力坍缩、极光成因、开普勒差速、心肌节律——
 它们不是"一个东西长什么样"，而是"一个参数变了，形态怎么跟着变"。
 把这类过程做成可被手势实时操控的粒子场，"变量 → 形态"的因果链就变成了看得见的东西。
+
 **边界说明**：本作品**运行时不接入大模型**——AI 出现在开发期（Vibe Coding 生成代码与着色器），
 产品本身是 MediaPipe 手势识别 + GPGPU 物理模拟。因此不套用赛题方向 9「数据探索与赛博画像可视化」
 中"大模型作为高级决策器驱动硬件动作"的框架；在**技术实现**上，本作品与方向 9 所描述的
@@ -247,7 +248,7 @@ npm run preview    # 本地预览构建结果
 │       └── OneEuroFilter.ts    # 一欧元滤波（3 通道）
 ├── docs/
 │   └── ARCHITECTURE.md         # 架构说明（英文）
-├── prompts/                    # 事后技术复盘，非原始 AI 对话
+├── prompts/                    # original/ 为原始 AI 对话；01~03 为技术复盘
 ├── .github/workflows/deploy.yml# GitHub Pages 自动部署
 ├── package.json
 ├── tsconfig.json
@@ -336,7 +337,7 @@ npm run preview    # 本地预览构建结果
 | **产品化** | 全站中文化与品牌重命名（"智控星海"）、启动页模式选择、Toast 状态反馈、HUD、帮助浮层 |
 | **工程化** | 严格 TypeScript 类型检查（`tsc --noEmit` 零错误）、GitHub Pages 自动部署 |
 
-> 更详细的逐项说明见 [`ORIGINALITY.md`](ORIGINALITY.md)。`prompts/` 中现有三篇是事后技术复盘，不是 AI 工具导出的原始对话；原始记录待补。
+更详细的逐项说明见 [`ORIGINALITY.md`](ORIGINALITY.md)。`prompts/01~03` 是事后技术复盘，不是原始对话；**原始 AI 对话**见 [`prompts/original/`](prompts/original/)——4 个核心迭代、36 轮，带原始时间戳与 SHA-256 校验清单。
 
 ---
 
