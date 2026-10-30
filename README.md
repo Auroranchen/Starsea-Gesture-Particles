@@ -17,7 +17,7 @@
 | 选题方向 | 赛题方向 5「*AI 驱动的高交互教育与可视化*」 |
 | 参赛形式 | 个人赛 · 作品题 |
 | 版本 | 省赛提交版（省赛作品提交截止 2026-11-18） |
-| 配套材料 | 原始 AI 对话 [`prompts/original/`](prompts/original/)（4 个核心迭代、36 轮，附 SHA-256 校验清单）· 技术文档 [`docs/智控星海_技术文档.pdf`](docs/智控星海_技术文档.pdf) · 架构说明 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
+| 配套材料 | 原始 AI 对话 [`prompts/original/`](prompts/original/)（4 个核心迭代、36 轮，附 SHA-256 校验清单）· 技术文档 [`docs/智控星海_技术文档.pdf`](docs/智控星海_技术文档.pdf) · 作品介绍 [`docs/智控星海_作品介绍.pdf`](docs/智控星海_作品介绍.pdf) · 架构说明 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
 
 **为什么落在方向 5**：赛题对方向 5 的描述是"将抽象、复杂的概念转化为直观的、可通过拖拽互动的可视化"。
 本项目针对的正是课堂上讲不清的那类内容——引力坍缩、极光成因、开普勒差速、心肌节律——
