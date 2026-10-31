@@ -1,5 +1,5 @@
 # 智控星海 · StarSea
-
+[![XERJ Corpus Hub 贡献者](https://hub.xerj.org/contributors/Auroranchen/badge.svg)](https://hub.xerj.org/contributors/Auroranchen)
 > 用手势驾驭星空的实时粒子实验室 —— 面向天文科普教学的零接触交互可视化工具
 
 **在线体验**：<https://auroranchen.github.io/Starsea-Gesture-Particles/>　（无需安装、无需构建，浏览器打开即用）
