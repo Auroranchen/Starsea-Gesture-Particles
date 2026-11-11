@@ -293,6 +293,8 @@ export const CONFIG = {
   trackingLostNeutralMs: 1000,
 
   autoQuality: true,
+  /** 帧率采样窗口（毫秒）。README 里写的「每 500ms 统计一次」即此值。 */
+  fpsSampleIntervalMs: 500,
   fpsSampleSeconds: 3,
   fpsDowngradeBelow: 45,
 };

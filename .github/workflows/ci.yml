@@ -19,8 +19,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # 以下三项是「护栏」：任何一条不过，说明 AI 或人改出了不该有的东西
+      - name: Shader contract (uniform / varying 声明一致性)
+        run: npm run check:contract
+
+      - name: Docs claims (文档里的性能数字必须有出处)
+        run: npm run check:claims
+
       - name: Type check
         run: npx tsc --noEmit
 
       - name: Build
         run: npm run build
+
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 7

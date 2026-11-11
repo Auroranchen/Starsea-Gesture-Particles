@@ -45,7 +45,7 @@ There is no backend. All video processing happens on-device; nothing is uploaded
 
 ## Render loop (`main.ts`)
 
-Each frame (~60 Hz):
+Each frame (once per display refresh):
 
 1. **Poll input** — `InputManager.poll()` returns dial value, rotation delta, colliders, energy
 2. **Update state** — `StateMachine.update()` eases dial/palette toward targets, writes sim uniforms

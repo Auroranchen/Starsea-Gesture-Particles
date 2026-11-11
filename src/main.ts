@@ -342,7 +342,7 @@ let previousHandsActive = false;
 function sampleFps(now: number): void {
   fpsFrames++;
   const elapsed = now - fpsSampleStart;
-  if (elapsed >= 500) {
+  if (elapsed >= CONFIG.fpsSampleIntervalMs) {
     fps = (fpsFrames / elapsed) * 1000;
     fpsFrames = 0;
     fpsSampleStart = now;
