@@ -14,7 +14,6 @@ import { StartScreen } from './ui/StartScreen';
 import { WebcamPanel } from './ui/WebcamPanel';
 import { ScaleAxis } from './ui/ScaleAxis';
 import { KnowledgeCard } from './ui/KnowledgeCard';
-import { ShareLink } from './ui/ShareLink';
 import { TeachingMode } from './ui/TeachingMode';
 import { Export } from './ui/Export';
 
@@ -163,10 +162,6 @@ scaleAxis.onNavigate = (id: SceneId) => switchScene(id);
 const knowledgeCard = new KnowledgeCard();
 app.appendChild(knowledgeCard.element);
 
-const shareLink = new ShareLink();
-app.appendChild(shareLink.element);
-shareLink.bindCopyButtons();
-
 const teachingMode = new TeachingMode();
 app.appendChild(teachingMode.subtitleEl);
 let hudBeforeTeaching = true;
@@ -185,13 +180,6 @@ teachingMode.onStop = () => {
 
 const exporter = new Export();
 exporter.init(canvas);
-
-// 解析 URL hash（扫码同屏入场）
-const hashState = ShareLink.parseHash();
-if (hashState) {
-  if (hashState.scene) currentScene = hashState.scene;
-  if (hashState.quality) overlay.quality = hashState.quality;
-}
 
 const input = new InputManager(canvas, camera);
 const webcamPanel = new WebcamPanel(() => activeTracker);
@@ -291,14 +279,6 @@ window.addEventListener('keydown', (e) => {
       break;    case 't':
       teachingMode.toggle({ scene: currentScene, dial: stateMachine.dial });
       break;
-    case 'q':
-      shareLink.toggle({
-        scene: currentScene,
-        quality: overlay.quality,
-        dial: stateMachine.dial,
-        energy: stateMachine.energy,
-      });
-      break;
     case 'e':
       exporter.requestCapture({
         scene: currentScene,
@@ -319,7 +299,6 @@ window.addEventListener('keydown', (e) => {
       input.detachHands();
       activeTracker = null;
       overlay.closePanels();
-      shareLink.hide();
       knowledgeCard.hide(); // 固定中的知识卡不应跟到启动页
       startScreen.show();
       break;

@@ -638,75 +638,6 @@ input[type='range']:disabled { opacity: 0.35; }
   .knowledge-card:not(.hidden) { opacity: 1; }
 }
 
-/* ── Share Panel ────────────────────────────────────────────────── */
-/* 定位与尺寸统一由文件后段那一处 .share-panel 定义（inset:0 + flex 居中）。
-   这里原本还有一份 top/left/transform/width 的旧定义，它没有被后一份完全覆盖：
-   inset:0 与 width:360px 冲突导致遮罩只占左侧一列，transform: translate(-50%,-50%)
-   又把整个面板向左上推了半个屏幕——看起来就像"弹到左上角"。已删除，避免两份真相。 */
-.share-inner {
-  padding: 18px 20px 16px;
-  background: var(--panel-solid);
-  border: 1px solid var(--line-strong);
-  box-shadow: 0 20px 56px rgba(0,0,0,0.44);
-}
-.share-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
-.share-title {
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  color: var(--ink);
-  text-transform: uppercase;
-}
-.share-close {
-  min-height: unset;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  font-size: 12px;
-  line-height: 1;
-  display: grid;
-  place-items: center;
-}
-.share-qr {
-  display: block;
-  width: 160px;
-  height: 160px;
-  margin: 0 auto 12px;
-  border: 1px solid var(--line);
-}
-.share-params {
-  display: flex;
-  justify-content: center;
-  gap: 14px;
-  margin-bottom: 10px;
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 10px;
-  color: var(--ink-dim);
-}
-.share-params b { color: var(--orange); font-weight: 600; }
-.share-url-row { display: flex; gap: 6px; margin-bottom: 8px; }
-.share-url-input {
-  flex: 1;
-  min-width: 0;
-  padding: 6px 8px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--line);
-  color: var(--ink-soft);
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 10px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.share-copy-btn { flex-shrink: 0; padding: 6px 12px; font-size: 11px; }
-.share-hint { font-size: 10px; color: var(--ink-dim); line-height: 1.5; text-align: center; }
-
 /* ── Teaching Mode Subtitle ─────────────────────────────────────── */
 .teaching-subtitle {
   position: fixed;
@@ -899,76 +830,6 @@ input[type='range']:disabled { opacity: 0.35; }
 .kc-answer.hidden { display: none; }
 
 /* ═══════════════════════════════════════════════════════════
-   分享面板 ShareLink
-═══════════════════════════════════════════════════════════ */
-.share-panel {
-  position: fixed;
-  inset: 0;
-  z-index: 90;
-  background: rgba(5,3,12,0.72);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(4px);
-}
-.share-panel.hidden { display: none; }
-.share-inner {
-  position: relative;
-  background: var(--panel-solid);
-  border: 1px solid var(--line-strong);
-  border-radius: 14px;
-  padding: 24px 28px;
-  width: min(380px, calc(100vw - 32px));
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.share-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--accent);
-  letter-spacing: 0.04em;
-}
-.share-qr { min-height: 60px; }
-.share-desc { font-size: 12px; color: var(--ink-soft); }
-.share-hint { font-size: 11px; color: var(--ink-dim); line-height: 1.5; }
-.share-close {
-  position: absolute;
-  top: 14px; right: 14px;
-  background: none;
-  border: none;
-  color: var(--ink-dim);
-  font-size: 16px;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: color 0.15s;
-}
-.share-close:hover { color: var(--ink); }
-.share-qr-placeholder { display: flex; flex-direction: column; gap: 10px; }
-.share-qr-label { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-dim); }
-.share-qr-link {
-  display: block;
-  font-size: 11px;
-  color: var(--cyan);
-  word-break: break-all;
-  line-height: 1.5;
-}
-.share-copy-btn {
-  align-self: flex-start;
-  padding: 6px 14px;
-  background: rgba(255,208,113,0.1);
-  border: 1px solid rgba(255,208,113,0.3);
-  border-radius: 7px;
-  color: var(--accent);
-  font-size: 12px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.share-copy-btn:hover { background: rgba(255,208,113,0.18); }
-.share-copy-hint { font-size: 10px; color: var(--ink-dim); line-height: 1.5; }
-
-/* ═══════════════════════════════════════════════════════════
    课案模式字幕条 TeachingMode
 ═══════════════════════════════════════════════════════════ */
 .teaching-subtitle {
@@ -992,13 +853,12 @@ input[type='range']:disabled { opacity: 0.35; }
 
 /* ═══════════════════════════════════════════════════════════
    学生端适配（手机竖屏）
-   扫码同屏的价值全在学生那台手机上：面板不能盖住粒子、
-   触控目标要够大、hover 效果要去掉。
+   手机 / 小屏适配：面板不能盖住粒子、触控目标要够大、hover 效果要去掉。
    这一组放在文件最末，确保能覆盖上面各组件的默认定位
    （上面的 640px 断点写在组件定义之前，压不住它们）。
 ══════════════════════════════════════════════════════════ */
 @media (max-width: 720px) {
-  button, .seg button, .mode-option, .scale-axis-dot, .share-close, .share-copy-btn {
+  button, .seg button, .mode-option, .scale-axis-dot {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
@@ -1067,8 +927,6 @@ input[type='range']:disabled { opacity: 0.35; }
   }
 
   /* 分享面板与课案字幕 */
-  .share-inner { max-height: calc(100dvh - 24px); overflow-y: auto; }
-  .share-copy-btn { min-height: 40px; }
   .teaching-subtitle {
     bottom: calc(max(6px, env(safe-area-inset-bottom)) + 56px);
     max-width: calc(100vw - 24px);
@@ -1089,20 +947,3 @@ input[type='range']:disabled { opacity: 0.35; }
   .teaching-subtitle { bottom: calc(max(6px, env(safe-area-inset-bottom)) + 48px); }
 }
 
-/* 扫码面板的环境提示：localhost 与局域网 http 的两个坑 */
-.share-warn {
-  margin-top: 10px;
-  padding: 8px 10px;
-  border: 1px solid rgba(255, 208, 113, 0.35);
-  border-radius: 8px;
-  background: rgba(255, 208, 113, 0.08);
-  color: #ffd9a3;
-  font-size: 11px;
-  line-height: 1.65;
-}
-.share-warn code {
-  padding: 0 3px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.1);
-  font-size: 10px;
-}

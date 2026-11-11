@@ -33,10 +33,6 @@ echo.
 echo   Starting Gesture Particles...
 echo   The app will open in your browser. Close this window to stop the server.
 echo.
-echo   Phone / classroom mirroring: tell students to use the "Network:" address
-echo   printed below (http://10.x.x.x:5173), NOT localhost -- a phone opening
-echo   localhost would be talking to itself. Press Q in the app to show the QR.
-echo.
 
 start "" /b cmd /c "timeout /t 3 >nul & start http://localhost:5173/"
 
