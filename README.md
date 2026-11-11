@@ -1,5 +1,5 @@
 # 智控星海 · StarSea
-
+[![XERJ Corpus Hub 贡献者](https://hub.xerj.org/contributors/Auroranchen/badge.svg)](https://hub.xerj.org/contributors/Auroranchen)
 [![CI](https://github.com/Auroranchen/Starsea-Gesture-Particles/actions/workflows/ci.yml/badge.svg)](https://github.com/Auroranchen/Starsea-Gesture-Particles/actions/workflows/ci.yml)
 
 > **一套 GPGPU 粒子引擎，跨越 22 个数量级的物理课堂。老师用手势演示，学生扫码同屏自己动手，每个尺度都留一问。**
