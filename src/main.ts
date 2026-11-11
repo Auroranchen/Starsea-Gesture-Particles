@@ -14,6 +14,7 @@ import { StartScreen } from './ui/StartScreen';
 import { WebcamPanel } from './ui/WebcamPanel';
 import { ScaleAxis } from './ui/ScaleAxis';
 import { KnowledgeCard } from './ui/KnowledgeCard';
+import { LessonPanel } from './ui/LessonPanel';
 import { TeachingMode } from './ui/TeachingMode';
 import { Export } from './ui/Export';
 
@@ -136,6 +137,7 @@ function switchScene(id: SceneId): void {
   overlay.setScene(id);
   overlay.toast(`场景：${id}`);
   scaleAxis.setScene(id);
+  lessonPanel.setScene(id);
   knowledgeCard.showWithAutoHide(id);
 }
 
@@ -161,6 +163,9 @@ scaleAxis.onNavigate = (id: SceneId) => switchScene(id);
 
 const knowledgeCard = new KnowledgeCard();
 app.appendChild(knowledgeCard.element);
+
+const lessonPanel = new LessonPanel(currentScene);
+app.appendChild(lessonPanel.element);
 
 const teachingMode = new TeachingMode();
 app.appendChild(teachingMode.subtitleEl);
@@ -275,6 +280,9 @@ window.addEventListener('keydown', (e) => {
       scaleAxis.next();
       break;
     case 'k':
+      lessonPanel.toggle();
+      break;
+    case 'i':
       knowledgeCard.toggle(currentScene);
       break;    case 't':
       teachingMode.toggle({ scene: currentScene, dial: stateMachine.dial });
