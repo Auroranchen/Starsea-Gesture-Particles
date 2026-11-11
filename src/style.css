@@ -639,16 +639,10 @@ input[type='range']:disabled { opacity: 0.35; }
 }
 
 /* ── Share Panel ────────────────────────────────────────────────── */
-.share-panel {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 20;
-  width: min(360px, calc(100vw - 32px));
-  pointer-events: auto;
-}
-.share-panel.hidden { display: none; }
+/* 定位与尺寸统一由文件后段那一处 .share-panel 定义（inset:0 + flex 居中）。
+   这里原本还有一份 top/left/transform/width 的旧定义，它没有被后一份完全覆盖：
+   inset:0 与 width:360px 冲突导致遮罩只占左侧一列，transform: translate(-50%,-50%)
+   又把整个面板向左上推了半个屏幕——看起来就像"弹到左上角"。已删除，避免两份真相。 */
 .share-inner {
   padding: 18px 20px 16px;
   background: var(--panel-solid);
