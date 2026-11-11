@@ -87,6 +87,10 @@ export class Overlay {
           <tr><td>&#128406; 右手拖动 / 右键拖动</td><td>旋转粒子场（带惯性）</td></tr>
           <tr><td>&#128400;&#128400; 双手张开 / 松开左键</td><td>冲击波：把粒子推开</td></tr>
           <tr><td>手速 / 鼠标移动速度</td><td>能量：加亮最快的粒子，放大湍流</td></tr>
+          <tr><td>空格 + 拖拽</td><td>鼠标模式：按住空格再拖左键，等效于右键拖拽旋转</td></tr>
+          <tr><td>1 &nbsp;/&nbsp; 2</td><td>鼠标模式：把形态轴锁在 0（张开）/ 1（握拳），便于定住演示</td></tr>
+          <tr><td>0</td><td>鼠标模式：解除锁定，交回给手势或左键</td></tr>
+          <tr><td>滚轮</td><td>鼠标模式：连续微调形态轴，比 1 / 2 锁存更细</td></tr>
           <tr><td>G</td><td>循环切换场景（nebula→galaxy→ocean→saturn→heart→pulse）</td></tr>
           <tr><td>[ &nbsp;/&nbsp; ]</td><td>尺度轴跳站（按物理尺度从小到大切换场景）</td></tr>
           <tr><td>K</td><td>知识卡开合 / 揭晓课堂一问答案</td></tr>
