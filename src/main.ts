@@ -12,6 +12,11 @@ import { HandTracker } from './input/HandTracker';
 import { Overlay } from './ui/Overlay';
 import { StartScreen } from './ui/StartScreen';
 import { WebcamPanel } from './ui/WebcamPanel';
+import { ScaleAxis } from './ui/ScaleAxis';
+import { KnowledgeCard } from './ui/KnowledgeCard';
+import { ShareLink } from './ui/ShareLink';
+import { TeachingMode } from './ui/TeachingMode';
+import { Export } from './ui/Export';
 
 // 运行期错误可视化：JS 异常与着色器编译/链接错误直接在页面底部显示，
 // 避免"黑屏但没有线索"。正常运行时完全不可见。
@@ -130,7 +135,9 @@ function switchScene(id: SceneId): void {
   angularVel.set(0, CONFIG.autoSpin);
   applyCameraForScene(id);
   overlay.setScene(id);
-  overlay.toast(`Scene: ${id}`);
+  overlay.toast(`场景：${id}`);
+  scaleAxis.setScene(id);
+  knowledgeCard.showWithAutoHide(id);
 }
 
 const angularVel = new THREE.Vector2(0, CONFIG.autoSpin);
@@ -146,6 +153,42 @@ bloomPass.enabled = overlay.bloom;
 bloomPass.strength = overlay.bloomStrength;
 bloomPass.radius = CONFIG.bloom.radius;
 bloomPass.threshold = CONFIG.bloom.threshold;
+
+// ── 新增 UI 组件 ──────────────────────────────────────────────────────────
+const scaleAxis = new ScaleAxis();
+app.appendChild(scaleAxis.element);
+scaleAxis.setScene(currentScene);
+scaleAxis.onNavigate = (id: SceneId) => switchScene(id);
+
+const knowledgeCard = new KnowledgeCard();
+app.appendChild(knowledgeCard.element);
+
+const shareLink = new ShareLink();
+app.appendChild(shareLink.element);
+shareLink.bindCopyButtons();
+
+const teachingMode = new TeachingMode();
+app.appendChild(teachingMode.subtitleEl);
+teachingMode.onStart = (firstScene) => {
+  switchScene(firstScene);
+  overlay.toggleHud(); // 隐藏 HUD
+};
+teachingMode.onSceneChange = (id) => {
+  switchScene(id);
+};
+teachingMode.onStop = () => {
+  overlay.toggleHud(); // 恢复 HUD
+};
+
+const exporter = new Export();
+exporter.init(canvas);
+
+// 解析 URL hash（扫码同屏入场）
+const hashState = ShareLink.parseHash();
+if (hashState) {
+  if (hashState.scene) currentScene = hashState.scene;
+  if (hashState.quality) overlay.quality = hashState.quality;
+}
 
 const input = new InputManager(canvas, camera);
 const webcamPanel = new WebcamPanel(() => activeTracker);
@@ -195,7 +238,7 @@ overlay.onFullscreen = () => {
   if (document.fullscreenElement) {
     void document.exitFullscreen();
   } else {
-    void document.documentElement.requestFullscreen().catch(() => overlay.toast('Fullscreen is unavailable'));
+    void document.documentElement.requestFullscreen().catch(() => overlay.toast('当前浏览器不支持全屏'));
   }
 };
 overlay.onExitToMenu = () => {
@@ -234,10 +277,46 @@ window.addEventListener('keydown', (e) => {
     case 'c':
       input.toggleInteractionMode();
       break;
+    case '[':
+      scaleAxis.prev();
+      break;
+    case ']':
+      scaleAxis.next();
+      break;
+    case 'k':
+      knowledgeCard.toggle(currentScene);
+      break;    case 't':
+      teachingMode.toggle({ scene: currentScene, dial: stateMachine.dial });
+      break;
+    case 'q':
+      shareLink.toggle({
+        scene: currentScene,
+        quality: overlay.quality,
+        dial: stateMachine.dial,
+        energy: stateMachine.energy,
+      });
+      break;
+    case 'e':
+      exporter.requestCapture({
+        scene: currentScene,
+        quality: overlay.quality,
+        dial: stateMachine.dial,
+        energy: stateMachine.energy,
+        bloomEnabled: overlay.bloom,
+        bloomStrength: overlay.bloomStrength,
+        pointSize: CONFIG.pointSize,
+      });
+      overlay.toast('已请求导出画面与参数快照');
+      break;
     case 'escape':
+      if (teachingMode.isActive) {
+        teachingMode.stop();
+        break;
+      }
       input.detachHands();
       activeTracker = null;
       overlay.closePanels();
+      shareLink.hide();
       startScreen.show();
       break;
   }
@@ -286,7 +365,7 @@ function sampleFps(now: number): void {
     if (idx < order.length - 1) {
       overlay.quality = order[idx + 1];
       buildParticles(overlay.quality);
-      overlay.toast(`Dropped to ${overlay.quality} quality to keep things smooth`);
+      overlay.toast(`已降至 ${overlay.quality} 画质以保持流畅`);
     }
   }
 }
@@ -298,18 +377,36 @@ function frame(): void {
   const dt = clock.getDelta();
   const now = performance.now();
 
-  const { frame: gestures, usingHands } = input.poll();
+  // 课案模式：tick 返回合成帧，跳过真实输入
+  let gestures: ReturnType<typeof input.poll>['frame'];
+  let usingHands: boolean;
+  const teachingTick = teachingMode.tick(dt);
+  if (teachingTick) {
+    if (teachingTick.scene !== currentScene) switchScene(teachingTick.scene);
+    // 合成一个最小 GestureFrame：仅设置 gather/dial
+    const { frame: realFrame } = input.poll();
+    gestures = {
+      ...realFrame,
+      gather: teachingTick.dial,
+      bothFists: teachingTick.dial,
+    };
+    usingHands = false;
+  } else {
+    const polled = input.poll();
+    gestures = polled.frame;
+    usingHands = polled.usingHands;
+  }
 
   if (usingHands !== previousHandsActive && input.mode === 'hand') {
-    overlay.toast(usingHands ? 'Hand tracking restored' : 'Hand tracking lost');
+    overlay.toast(usingHands ? '手部追踪已恢复' : '手部追踪丢失');
   }
   previousHandsActive = usingHands;
 
   if (gestures.modeToggled) {
     overlay.toast(
       gestures.mode === 'collider'
-        ? 'Collider mode — your hands are force balls. Press C to switch back.'
-        : 'Dial mode — left hand is the dial, right hand rotates. Press C for collider.',
+        ? '力场碰撞模式 —— 手掌作为力场球推动粒子。按 C 切回调节盘模式。'
+        : '调节盘模式 —— 左手握拳驱动拨盘，右手旋转。按 C 切换碰撞模式。',
     );
   }
 
@@ -323,9 +420,9 @@ function frame(): void {
   stateMachine.update(dt, gestures, localColliders, velUniforms, particles.colorUniforms);
   for (const event of stateMachine.consumeEvents()) {
     const messages: Record<string, string> = {
-      burst: 'Burst field released',
-      'collapse-start': 'Star forge engaged',
-      'gravity-start': 'Dual-hand gravity engaged',
+      burst: '冲击波已释放',
+      'collapse-start': '星锻已启动',
+      'gravity-start': '双手引力已激活',
     };
     overlay.toast(messages[event]);
   }
@@ -392,6 +489,17 @@ function frame(): void {
   );
 
   composer.render();
+
+  // 渲染后同一 microtask 里采样 canvas，导出 PNG（preserveDrawingBuffer=false 的约束）
+  exporter.onAfterRender({
+    scene: currentScene,
+    quality: overlay.quality,
+    dial: stateMachine.dial,
+    energy: stateMachine.energy,
+    bloomEnabled: overlay.bloom,
+    bloomStrength: overlay.bloomStrength,
+    pointSize: CONFIG.pointSize,
+  });
 }
 
 document.addEventListener('visibilitychange', () => {

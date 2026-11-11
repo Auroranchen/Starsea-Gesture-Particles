@@ -56,47 +56,56 @@ export class Overlay {
         </div>
         <div class="hud-energy-block">
           <div class="hud-energy-row">
-            <span class="hud-label">ENERGY</span>
+            <span class="hud-label">能量</span>
             <span class="hud-energy-val" data-role="energy">0%</span>
           </div>
           <div class="hud-bar"><span class="hud-bar-fill" data-role="energy-fill"></span></div>
         </div>
         <div class="hud-grid">
-          <span class="hud-label">FPS</span><span class="hud-val" data-role="fps">--</span>
-          <span class="hud-label">PARTICLES</span><span class="hud-val" data-role="count">--</span>
-          <span class="hud-label">INPUT</span><span class="hud-val" data-role="mode">mouse</span>
-          <span class="hud-label" data-role="gather-label">DIAL</span><span class="hud-val" data-role="gather">0%</span>
+          <span class="hud-label">帧率</span><span class="hud-val" data-role="fps">--</span>
+          <span class="hud-label">粒子数</span><span class="hud-val" data-role="count">--</span>
+          <span class="hud-label">输入</span><span class="hud-val" data-role="mode">鼠标</span>
+          <span class="hud-label" data-role="gather-label">拨盘</span><span class="hud-val" data-role="gather">0%</span>
         </div>
         <div class="hud-divider"></div>
         <div class="hud-hands-row">
-          <span class="hud-hand" data-role="hand-l"><span class="hud-hand-dot" data-hand="l"></span>L</span>
+          <span class="hud-hand" data-role="hand-l"><span class="hud-hand-dot" data-hand="l"></span>左</span>
           <span class="hud-hand-sep"></span>
-          <span class="hud-hand" data-role="hand-r"><span class="hud-hand-dot" data-hand="r"></span>R</span>
+          <span class="hud-hand" data-role="hand-r"><span class="hud-hand-dot" data-hand="r"></span>右</span>
         </div>
         <div class="hud-grid">
-          <span class="hud-label">POSE</span><span class="hud-val hud-val-small" data-role="poses">neutral / neutral</span>
-          <span class="hud-label">TRACKING</span><span class="hud-val" data-role="tracking">mouse</span>
+          <span class="hud-label">姿态</span><span class="hud-val hud-val-small" data-role="poses">中性 / 中性</span>
+          <span class="hud-label">追踪</span><span class="hud-val" data-role="tracking">鼠标</span>
         </div>
-        <div class="hud-keys">? help &middot; s settings &middot; p camera view</div>
+        <div class="hud-keys">? 帮助 &middot; s 设置 &middot; p 摄像头预览</div>
       </div>
       <div class="panel help hidden" data-role="help">
-        <h2>Help</h2>
+        <h2>帮助</h2>
         <table>
-          <tr><td>&#128400; open hand / move</td><td>collide &amp; shove waves — the field calms as you open</td></tr>
-          <tr><td>&#9994; close your hand / hold left</td><td>a smooth dial: the field gathers, heats, and rises into fire</td></tr>
-          <tr><td>&#128406;&#128406; two open hands / hold right or space</td><td>gather a sphere between them; distance = size</td></tr>
-          <tr><td>&#128400;&#128400; fling hands apart / release</td><td>burst the sphere</td></tr>
-          <tr><td>finger spread</td><td>turbulence</td></tr>
-          <tr><td>hand speed</td><td>energy, heat &amp; brightness</td></tr>
-          <tr><td>1 / 2 / 3 &middot; 0</td><td>lock waves / sphere / fire &middot; unlock</td></tr>
-          <tr><td>scroll wheel</td><td>ball radius</td></tr>
-          <tr><td>h &middot; p &middot; r &middot; esc</td><td>hud &middot; camera view &middot; reset &middot; menu</td></tr>
+          <tr><td>&#128400; 展开手掌 / 移动</td><td>碰撞模式：手掌作为力场球推动粒子</td></tr>
+          <tr><td>&#9994; 握拳 / 按住左键</td><td>调节盘：0→1 连续驱动场景形态变化</td></tr>
+          <tr><td>&#128406; 右手拖动 / 右键拖动</td><td>旋转粒子场（带惯性）</td></tr>
+          <tr><td>&#128400;&#128400; 双手张开 / 松开左键</td><td>冲击波：把粒子推开</td></tr>
+          <tr><td>手速 / 鼠标移动速度</td><td>能量：加亮最快的粒子，放大湍流</td></tr>
+          <tr><td>G</td><td>循环切换场景（nebula→galaxy→ocean→saturn→heart→pulse）</td></tr>
+          <tr><td>[ &nbsp;/&nbsp; ]</td><td>尺度轴跳站（按物理尺度从小到大切换场景）</td></tr>
+          <tr><td>K</td><td>知识卡开合 / 揭晓课堂一问答案</td></tr>
+          <tr><td>T</td><td>课案模式：90 秒按尺度轴顺序自动巡演</td></tr>
+          <tr><td>Q</td><td>生成分享链接（扫码同屏）</td></tr>
+          <tr><td>E</td><td>导出当前画面 PNG + 参数快照 JSON</td></tr>
+          <tr><td>C</td><td>切换 调节盘 / 力场碰撞 交互模式</td></tr>
+          <tr><td>S</td><td>打开 / 关闭设置面板</td></tr>
+          <tr><td>H</td><td>隐藏 / 显示 HUD</td></tr>
+          <tr><td>P</td><td>显示 / 隐藏摄像头预览</td></tr>
+          <tr><td>R</td><td>重置粒子（重新播种）</td></tr>
+          <tr><td>Esc</td><td>断开摄像头，返回启动页</td></tr>
+          <tr><td>? &nbsp;/&nbsp; /</td><td>本帮助面板</td></tr>
         </table>
       </div>
       <div class="panel settings hidden" data-role="settings">
-        <h2>Settings</h2>
+        <h2>设置</h2>
         <div class="setting-row">
-          <span>scene</span>
+          <span>场景</span>
           <div class="seg" data-role="scene">
             <button data-scene="nebula">nebula</button>
             <button data-scene="galaxy">galaxy</button>
@@ -107,28 +116,28 @@ export class Overlay {
           </div>
         </div>
         <div class="setting-row">
-          <span>quality</span>
+          <span>画质</span>
           <div class="seg" data-role="quality">
-            <button data-q="low">low</button>
-            <button data-q="med">med</button>
-            <button data-q="high">high</button>
+            <button data-q="low">低</button>
+            <button data-q="med">中</button>
+            <button data-q="high">高</button>
           </div>
         </div>
         <div class="setting-row">
-          <span>bloom</span>
+          <span>泛光</span>
           <button class="toggle" data-role="bloom"></button>
         </div>
         <div class="setting-row">
-          <span>bloom amount <em data-role="bloom-strength-value"></em></span>
+          <span>泛光强度 <em data-role="bloom-strength-value"></em></span>
           <input type="range" data-role="bloom-strength" min="0" max="2" step="0.05" />
         </div>
         <div class="setting-row">
-          <span>particle size <em data-role="point-size-value"></em></span>
+          <span>粒子大小 <em data-role="point-size-value"></em></span>
           <input type="range" data-role="point-size" min="0.5" max="5" step="0.1" />
         </div>
         <div class="setting-actions">
-          <button class="btn-ghost" data-role="fullscreen" title="Toggle fullscreen">fullscreen</button>
-          <button class="btn-ghost" data-role="exit-menu" title="Return to the mode selection screen">back to menu</button>
+          <button class="btn-ghost" data-role="fullscreen" title="切换全屏">全屏</button>
+          <button class="btn-ghost" data-role="exit-menu" title="回到交互模式选择页">返回启动页</button>
         </div>
       </div>
       <div class="toast hidden" data-role="toast"></div>

@@ -22,7 +22,7 @@ export class StartScreen {
         <header class="start-header">
           <div class="start-brand">
             <span class="start-brand-mark" aria-hidden="true"><i></i></span>
-            <span>GESTURE PARTICLES</span>
+            <span>星海 STARSEA</span>
           </div>
           <div class="start-meta">WEBGL2 / REALTIME / 2026</div>
         </header>
