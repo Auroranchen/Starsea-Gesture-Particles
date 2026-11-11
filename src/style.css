@@ -1023,6 +1023,34 @@ input[type='range']:disabled { opacity: 0.35; }
   line-height: 1.65;
 }
 
+/* 对应高中知识点：学科色块 + 名称 + 一句话 + 章节 */
+.lesson-hs-label {
+  margin: 12px 0 5px;
+  color: var(--ink-dim);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+.lesson-hs { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 7px; }
+.lesson-hs li { position: relative; padding-left: 44px; }
+.hs-sub {
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 36px;
+  padding: 1px 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 9px;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+.hs-sub[data-subject='地理'] { color: #7fd8ff; border-color: rgba(127, 216, 255, 0.4); }
+.hs-sub[data-subject='物理'] { color: var(--orange); border-color: rgba(255, 208, 113, 0.45); }
+.hs-sub[data-subject='生物'] { color: #8ce5b4; border-color: rgba(140, 229, 180, 0.4); }
+.hs-body { display: block; color: var(--ink-soft); font-size: 11.5px; line-height: 1.65; }
+.hs-body b { margin-right: 3px; color: var(--ink); font-weight: 600; }
+.hs-chapter { display: block; margin-top: 1px; color: var(--ink-dim); font-size: 9px; }
+
 /* 收起态：只剩一个竖排小标签，点它或按 K 展开 */
 .lesson-tab { display: none; }
 .lesson-panel.collapsed { width: auto; max-height: none; }

@@ -1,6 +1,7 @@
 import type { SceneId } from '../config';
 import { SCALE_AXIS } from '../config';
 import { LESSONS } from '../data/lessons';
+import { hsPointsForScene } from '../data/hsPoints';
 
 /**
  * LessonPanel — 左侧常驻的教学说明。
@@ -45,6 +46,23 @@ export class LessonPanel {
   private render(): void {
     const lesson = LESSONS[this.scene];
     const station = SCALE_AXIS.find((a) => a.scene === this.scene);
+    const hs = hsPointsForScene(this.scene);
+
+    const hsHtml = hs.length
+      ? `
+        <div class="lesson-hs-label">对应高中知识点</div>
+        <ul class="lesson-hs">
+          ${hs
+            .map(
+              (p) => `<li>
+                <span class="hs-sub" data-subject="${p.subject}">${p.subject}</span>
+                <span class="hs-body"><b>${p.title}</b>${p.text}</span>
+                <span class="hs-chapter">${p.chapter}</span>
+              </li>`,
+            )
+            .join('')}
+        </ul>`
+      : '';
 
     this.element.innerHTML = `
       <button class="lesson-tab" type="button" aria-label="展开教学说明">教学说明</button>
@@ -64,6 +82,7 @@ export class LessonPanel {
           ${lesson.points.map((p) => `<li>${p}</li>`).join('')}
         </ul>
         <p class="lesson-gesture">${lesson.gesture}</p>
+        ${hsHtml}
       </div>
     `;
 

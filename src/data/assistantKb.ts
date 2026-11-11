@@ -1,4 +1,5 @@
 import type { SceneId } from '../config';
+import { HS_POINTS } from './hsPoints';
 
 /**
  * 课堂助手的本地知识库。
@@ -552,4 +553,13 @@ export const KB: KbEntry[] = [
     q: '40 分钟一节课怎么分配？',
     a: '建议：5 分钟用 T 走一遍巡演建立尺度感，15 分钟停在 1–2 个与课本直接对应的场景（地球/土星）边切边讲，15 分钟让学生自己上手并回答课堂一问，5 分钟按 E 导出记录做小结。',
   },
+
+  // ── 高中知识点（由 hsPoints.ts 自动生成，一问一答）────────────
+  ...HS_POINTS.map((p) => ({
+    id: `hs-${p.id}`,
+    scene: p.scene,
+    tags: [p.title, ...p.aliases],
+    q: `什么是${p.title}？`,
+    a: `${p.text}　（${p.subject} · ${p.chapter}）`,
+  })),
 ];
