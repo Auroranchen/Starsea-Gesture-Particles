@@ -2,7 +2,8 @@
  * KnowledgeCard.ts — 六张知识卡（P0）
  *
  * 每个场景：概念、你正在改变的物理量、尺度与主导力、现实对照、课堂一问（答案默认折叠）。
- * 交互：K 键开合；切场景时自动淡入，3 秒后淡出；不遮挡 HUD（左下角）。
+ * 交互：K 键**固定显示 / 再按收起**（不会自动消失）；未固定时切场景会自动淡入 3 秒后淡出。
+ * 不遮挡 HUD（左下角）。
  *
  * 文案纪律：卡里出现的所有数值均来自 config.ts 的实际值，核对注释写在每条旁边。
  */
@@ -11,7 +12,8 @@ import { SCALE_AXIS } from '../config';
 
 export class KnowledgeCard {
   readonly element: HTMLElement;
-  private visible = false;
+  /** 是否由 K 键固定。固定后不自动消失，切场景只换内容。 */
+  private pinned = false;
   private autoHideTimer: number | null = null;
 
   constructor() {
@@ -26,7 +28,6 @@ export class KnowledgeCard {
     if (!data) return;
     this.element.innerHTML = this.buildCard(scene, data);
     this.element.classList.remove('hidden');
-    this.visible = true;
 
     // 绑定折叠/展开答案
     const btn = this.element.querySelector<HTMLButtonElement>('.kc-reveal-btn');
@@ -38,44 +39,62 @@ export class KnowledgeCard {
     });
   }
 
-  /** 切场景时由 main.ts 调用：自动显示 3 秒后淡出。 */
+  /** 切场景时由 main.ts 调用：已固定则只更新内容；未固定则自动显示 3 秒后淡出。 */
   setScene(scene: SceneId): void {
+    if (this.pinned) {
+      this.show(scene);
+      return;
+    }
     this.showWithAutoHide(scene);
   }
 
-  /** K 键：在显示/隐藏之间切换。 */
-  handleKey(): void {
-    // We need to track current scene for toggle
-    const currentData = SCALE_AXIS.find(a =>
-      !this.element.classList.contains('hidden') &&
-      this.element.querySelector('.kc-scene')?.textContent === a.scene
-    );
-    this.toggle(currentData?.scene ?? SCALE_AXIS[0].scene);
+  /** K 键：按一下固定显示，再按一下收起。 */
+  toggle(scene: SceneId): void {
+    if (this.pinned) {
+      this.unpin();
+    } else {
+      this.pin(scene);
+    }
+  }
+
+  /** 固定显示：不自动消失；此后切场景只换内容。 */
+  pin(scene: SceneId): void {
+    this.clearTimer();
+    this.element.classList.remove('fading');
+    this.show(scene);
+    this.pinned = true;
   }
 
   hide(): void {
-    this.visible = false;
+    this.pinned = false;
     this.element.classList.add('hidden');
+    this.element.classList.remove('fading');
+    this.clearTimer();
+  }
+
+  private unpin(): void {
+    this.hide();
+  }
+
+  private clearTimer(): void {
     if (this.autoHideTimer !== null) {
       clearTimeout(this.autoHideTimer);
       this.autoHideTimer = null;
     }
   }
 
-  toggle(scene: SceneId): void {
-    if (this.visible) this.hide();
-    else this.showWithAutoHide(scene);
-  }
-
-  /** 切场景时调用：自动显示 3 秒后淡出 */
+  /** 未固定时：显示 3 秒后淡出。 */
   showWithAutoHide(scene: SceneId): void {
+    if (this.pinned) {
+      this.show(scene);
+      return;
+    }
     this.show(scene);
-    if (this.autoHideTimer !== null) clearTimeout(this.autoHideTimer);
+    this.clearTimer();
     this.autoHideTimer = window.setTimeout(() => {
       this.element.classList.add('fading');
       this.autoHideTimer = window.setTimeout(() => {
         this.hide();
-        this.element.classList.remove('fading');
       }, 600);
     }, 3000);
   }
