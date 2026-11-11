@@ -96,6 +96,7 @@ export class Overlay {
           <tr><td>[ &nbsp;/&nbsp; ]</td><td>尺度轴跳站（按物理尺度从小到大切换场景）</td></tr>
           <tr><td>K</td><td>展开 / 收起左侧教学说明（默认展开）</td></tr>
           <tr><td>I</td><td>知识卡开合：概念 / 尺度 / 现实对照 / 课堂一问</td></tr>
+          <tr><td>A</td><td>课堂助手：基于内置知识库的检索问答（不联网、不调用大模型）</td></tr>
           <tr><td>T</td><td>课案模式：90 秒按尺度轴顺序自动巡演</td></tr>
           <tr><td>E</td><td>导出当前画面 PNG + 参数快照 JSON</td></tr>
           <tr><td>C</td><td>切换 调节盘 / 力场碰撞 交互模式</td></tr>

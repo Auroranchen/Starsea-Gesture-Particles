@@ -17,6 +17,7 @@ import { KnowledgeCard } from './ui/KnowledgeCard';
 import { LessonPanel } from './ui/LessonPanel';
 import { TeachingMode } from './ui/TeachingMode';
 import { Export } from './ui/Export';
+import { Assistant } from './ui/Assistant';
 
 // 运行期错误可视化：JS 异常与着色器编译/链接错误直接在页面底部显示，
 // 避免"黑屏但没有线索"。正常运行时完全不可见。
@@ -138,6 +139,7 @@ function switchScene(id: SceneId): void {
   overlay.toast(`场景：${id}`);
   scaleAxis.setScene(id);
   lessonPanel.setScene(id);
+  assistant.setScene(id);
   knowledgeCard.showWithAutoHide(id);
 }
 
@@ -166,6 +168,9 @@ app.appendChild(knowledgeCard.element);
 
 const lessonPanel = new LessonPanel(currentScene);
 app.appendChild(lessonPanel.element);
+
+const assistant = new Assistant(currentScene);
+app.appendChild(assistant.element);
 
 const teachingMode = new TeachingMode();
 app.appendChild(teachingMode.subtitleEl);
@@ -248,6 +253,11 @@ overlay.onSceneChange = (id) => switchScene(id);
 overlay.onRebuild = () => buildParticles(overlay.quality);
 
 window.addEventListener('keydown', (e) => {
+  // 焦点在输入框里时不拦截按键，否则助手面板里打字会触发全站快捷键
+  const target = e.target as HTMLElement | null;
+  if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+    return;
+  }
   switch (e.key.toLowerCase()) {
     case 'h':
       overlay.toggleHud();
@@ -281,6 +291,9 @@ window.addEventListener('keydown', (e) => {
       break;
     case 'k':
       lessonPanel.toggle();
+      break;
+    case 'a':
+      assistant.toggle();
       break;
     case 'i':
       knowledgeCard.toggle(currentScene);
