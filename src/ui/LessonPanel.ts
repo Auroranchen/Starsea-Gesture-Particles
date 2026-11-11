@@ -57,6 +57,7 @@ export class LessonPanel {
           <button class="lesson-collapse" type="button" aria-label="收起教学说明" title="收起（K）">✕</button>
         </div>
         <h3 class="lesson-title">${lesson.title}</h3>
+        <p class="lesson-curriculum">${lesson.curriculum}</p>
         <p class="lesson-hook">${lesson.hook}</p>
         <div class="lesson-points-label">知识点</div>
         <ul class="lesson-points">

@@ -955,10 +955,10 @@ input[type='range']:disabled { opacity: 0.35; }
 ══════════════════════════════════════════════════════════ */
 .lesson-panel {
   position: fixed;
-  top: max(176px, calc(env(safe-area-inset-top) + 176px));
+  top: max(288px, calc(env(safe-area-inset-top) + 288px));
   left: max(16px, env(safe-area-inset-left));
-  width: min(320px, calc(100vw - 32px));
-  max-height: calc(100dvh - 300px);
+  width: min(368px, calc(100vw - 32px));
+  max-height: calc(100dvh - 380px);
   z-index: 9;
   display: flex;
   flex-direction: column;
@@ -995,8 +995,17 @@ input[type='range']:disabled { opacity: 0.35; }
 }
 .lesson-collapse:hover { color: var(--ink); }
 
-.lesson-title { margin: 0 0 6px; color: var(--ink); font-size: 13px; font-weight: 600; }
-.lesson-hook { margin: 0 0 10px; color: var(--ink-soft); font-size: 11.5px; line-height: 1.7; }
+.lesson-title { margin: 0 0 4px; color: var(--ink); font-size: 15px; font-weight: 600; }
+.lesson-curriculum {
+  margin: 0 0 8px;
+  padding-left: 8px;
+  border-left: 2px solid rgba(255, 208, 113, 0.45);
+  color: var(--accent);
+  font-size: 10.5px;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+.lesson-hook { margin: 0 0 10px; color: var(--ink-soft); font-size: 12.5px; line-height: 1.75; }
 .lesson-points-label {
   margin-bottom: 4px;
   color: var(--ink-dim);
@@ -1004,14 +1013,14 @@ input[type='range']:disabled { opacity: 0.35; }
   letter-spacing: 0.12em;
 }
 .lesson-points { margin: 0 0 10px; padding-left: 14px; }
-.lesson-points li { margin-bottom: 5px; color: var(--ink-soft); font-size: 11.5px; line-height: 1.65; }
+.lesson-points li { margin-bottom: 6px; color: var(--ink-soft); font-size: 12.5px; line-height: 1.75; }
 .lesson-gesture {
   margin: 0;
-  padding-top: 8px;
+  padding-top: 9px;
   border-top: 1px solid var(--line);
   color: var(--accent);
-  font-size: 11px;
-  line-height: 1.6;
+  font-size: 12px;
+  line-height: 1.65;
 }
 
 /* 收起态：只剩一个竖排小标签，点它或按 K 展开 */
@@ -1041,5 +1050,6 @@ input[type='range']:disabled { opacity: 0.35; }
     max-height: 40dvh;
   }
   .lesson-panel.collapsed { right: auto; }
-  .lesson-hook, .lesson-points li { font-size: 12px; }
+  .lesson-hook, .lesson-points li { font-size: 13px; }
+  .lesson-title { font-size: 16px; }
 }
