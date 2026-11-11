@@ -4,6 +4,91 @@ export type Quality = keyof typeof QUALITY_SIZES;
 export const SCENES = ['nebula', 'galaxy', 'ocean', 'saturn', 'heart', 'pulse'] as const;
 export type SceneId = (typeof SCENES)[number];
 
+/**
+ * 对数尺度轴 —— 六个场景按物理尺度从小到大排列。
+ * 不要改 SCENES 的顺序（G 键循环依赖它）；尺度顺序单独定义在这里。
+ * 所有尺度数字均标「约 / 量级示意」，不写精确值。
+ * 知识卡文案中的每个数值均与下方 CONFIG 中对应字段核对过。
+ */
+export const SCALE_AXIS: ReadonlyArray<{
+  scene: SceneId;
+  sceneName: string;     // 中文场景名（尺度轴显示）
+  scaleLabel: string;    // 量级标签，如 "约 10⁻¹ m"
+  force: string;         // 主导物理量（尺度轴 tooltip 用）
+  concept: string;       // 一句话概念（≤40字）
+  gestureMap: string;    // 手势 ↔ 物理量映射
+  realWorld: string;     // 现实对照
+  question: string;      // 课堂一问
+  answer: string;        // 答案（默认折叠）
+}> = [
+  {
+    scene: 'heart',
+    sceneName: '心跳',
+    scaleLabel: '约 10⁻¹ m',
+    force: '心肌收缩节律、搏动波',
+    concept: '心脏以 62–128 BPM 节律收缩，搏动波从心尖向外传播。',
+    gestureMap: '握拳程度 → BPM（62 到 128，config.heart.bpmCalm / bpmIntense）及收缩幅度',
+    realWorld: '人体心跳，心肌节律收缩与舒张；心电图 P-QRS-T 对应每次 lub-dub。',
+    question: '为什么心跳声是"lub-dub"两个音，而不是一个？',
+    answer: '第一音（lub）来自房室瓣关闭，第二音（dub）来自动脉瓣关闭。粒子场双峰包络（相位 0.04 的 lub 峰 + 0.3 的 dub 峰）模拟了这两次关闭。',
+  },
+  {
+    scene: 'pulse',
+    sceneName: '离子脉冲',
+    scaleLabel: '约 10⁰ m',
+    force: '抛体运动、环形冲击波',
+    concept: '6 组粒子弹道点火，受重力回落；握拳时汇聚成环形冲击波。',
+    gestureMap: '握拳程度 → 粒子从弹道礼花收束为离子环（config.pulse.groups=6，period=3.0）',
+    realWorld: '烟花弹道、粒子加速器中的离子束环、等离子体环形约束（托卡马克）。',
+    question: '礼花各组为什么不同时点火，而是错开时间？',
+    answer: '错开点火（相位差 = 周期 / 组数）让视觉上始终有粒子在空中，避免同时落地造成空白；这也对应真实烟花"连发"的编排逻辑。',
+  },
+  {
+    scene: 'ocean',
+    sceneName: '粒子地球',
+    scaleLabel: '约 10⁷ m',
+    force: '自转、磁层与太阳风',
+    concept: '粒子地球自转，22% 的极区粒子在握拳时被抬升为极光幕。',
+    gestureMap: '握拳程度 → 极光风暴强度（config.ocean.auroraFraction=0.22，auroraHeight=0.55）',
+    realWorld: '地球极光，太阳风高能粒子沿磁力线进入极区大气，高度约 100–300 km。',
+    question: '极光为什么只出现在极区附近，而不是全球均匀分布？',
+    answer: '地磁场是偶极场，极区磁力线近乎垂直进入大气，太阳风高能粒子沿磁力线被引导至极圈附近（约纬度 65°–72°）与大气分子碰撞激发发光。',
+  },
+  {
+    scene: 'saturn',
+    sceneName: '土星环',
+    scaleLabel: '约 10⁸ m',
+    force: '开普勒差速、环缝共振',
+    concept: '土星环粒子轨道角速度随半径按 r⁻¹·⁵ 衰减（开普勒第三定律）。',
+    gestureMap: '握拳程度 → 环面隆起与湍流增强（config.saturn.keplerExponent=0.5）',
+    realWorld: '土星卡西尼缝，由土卫一 2:1 轨道共振在环上刻出粒子稀疏区。',
+    question: '卡西尼缝为什么是"空"的，而不是密集的？',
+    answer: '处于缝中的粒子轨道周期恰好是土卫一的 1/2，每次合相都受同向引力扰动，摄动累积使轨道偏心率增大，粒子最终被踢出该区域。',
+  },
+  {
+    scene: 'nebula',
+    sceneName: '星云',
+    scaleLabel: '约 10¹⁶ m',
+    force: '分子云引力收束',
+    concept: '稀疏分子云在引力作用下收束，最终坍缩为致密发光球体——恒星诞生前夜。',
+    gestureMap: '握拳程度 → 从湍流星云（cloudRadius=2.3）收束为致密球（ballRadiusTight=0.45）',
+    realWorld: '猎户座大星云，恒星形成区的分子云坍缩；哈勃"创生之柱"。',
+    question: '分子云坍缩时为什么会加速旋转？',
+    answer: '角动量守恒。云团原本缓慢自转，半径缩小后转动惯量减小，角速度必须增大以保持角动量不变——就像旋转的花样滑冰运动员收臂加速。',
+  },
+  {
+    scene: 'galaxy',
+    sceneName: '星系',
+    scaleLabel: '约 10²¹ m',
+    force: '密度波、旋臂熔铸',
+    concept: '旋臂是密度波而非固定结构，握拳触发星锻：旋臂向内螺旋熔铸为致密星球。',
+    gestureMap: '握拳程度 → 从旋涡星系收束为星锻（config.galaxy.armTwist=2.8，forgeRadius=0.85）',
+    realWorld: '银河系直径约 10⁵ 光年（≈ 10²¹ m）；旋臂转速约 210 km/s。',
+    question: '如果旋臂是密度波，太阳绕银心转动时是在穿越旋臂，还是随旋臂一起转？',
+    answer: '穿越旋臂。旋臂的图案速度（约 20–25 km/s）远低于太阳的轨道速度（约 220 km/s），太阳每隔约 1.5–2 亿年穿越一次旋臂。',
+  },
+];
+
 export const CONFIG = {
   defaultQuality: 'med' as Quality,
   maxDelta: 1 / 30,
