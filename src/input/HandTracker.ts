@@ -100,6 +100,13 @@ export class HandTracker {
     const tracker = new HandTracker(camera);
 
     try {
+      // 浏览器只在安全上下文（localhost / HTTPS）里暴露摄像头。
+      // 学生用手机通过局域网 http 打开时这里会缺失，给出可读的提示而不是一句 TypeError。
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error(
+          '摄像头需要 localhost 或 HTTPS 才能启用；当前是局域网 http，请改用鼠标/触屏模式',
+        );
+      }
       tracker.stream = await navigator.mediaDevices.getUserMedia({
         video: { width: 640, height: 480, facingMode: 'user' },
         audio: false,

@@ -66,6 +66,7 @@ export class ShareLink {
   async show(state: ShareState): Promise<void> {
     const hash = ShareLink.buildHash(state);
     const url = location.origin + location.pathname + hash;
+    const warning = ShareLink.buildWarning();
 
     let qrDataUrl = '';
     try {
@@ -95,6 +96,7 @@ export class ShareLink {
           <button class="share-copy-btn">复制</button>
         </div>
         <p class="share-hint">学生扫码后进入同一场景，可用触屏自己操控</p>
+        ${warning}
       </div>
     `;
 
@@ -114,6 +116,30 @@ export class ShareLink {
   hide(): void {
     this.element.classList.add('hidden');
     this.visible = false;
+  }
+
+  /**
+   * 在面板里如实说明「这个链接手机能不能扫开」。
+   * 这里是本项目最容易踩的坑：localhost 只指向设备自己，手机扫了必然打不开；
+   * 而在局域网 http 下浏览器又不允许调用摄像头。与其让人现场懵，不如直接写在面板上。
+   */
+  private static buildWarning(): string {
+    const host = location.hostname;
+    const isLoopback = host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]';
+    const tips: string[] = [];
+
+    if (isLoopback) {
+      tips.push(
+        '当前链接是本机地址（localhost），手机扫了会连到手机自己，打不开。' +
+          '请用启动终端里 <b>Network</b> 那一条（形如 <code>http://10.x.x.x:5173</code>）在浏览器打开本页，再按 Q 生成新的码。',
+      );
+    }
+    if (location.protocol === 'http:' && !isLoopback) {
+      tips.push('局域网 http 下浏览器不允许调用摄像头，学生用触屏操控即可；摄像头仍需 localhost 或 HTTPS。');
+    }
+
+    if (tips.length === 0) return '';
+    return `<p class="share-warn">${tips.join('<br>')}</p>`;
   }
 
   /** 给 Overlay 的复制按钮绑定事件（占位，兼容 main.ts 调用）。 */
