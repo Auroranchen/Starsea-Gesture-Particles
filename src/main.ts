@@ -169,15 +169,18 @@ shareLink.bindCopyButtons();
 
 const teachingMode = new TeachingMode();
 app.appendChild(teachingMode.subtitleEl);
+let hudBeforeTeaching = true;
 teachingMode.onStart = (firstScene) => {
+  hudBeforeTeaching = overlay.hudVisible;
+  overlay.setHudVisible(false); // 巡演期间只留字幕条
+  knowledgeCard.hide(); // 固定中的知识卡会挡住字幕
   switchScene(firstScene);
-  overlay.toggleHud(); // 隐藏 HUD
 };
 teachingMode.onSceneChange = (id) => {
   switchScene(id);
 };
 teachingMode.onStop = () => {
-  overlay.toggleHud(); // 恢复 HUD
+  overlay.setHudVisible(hudBeforeTeaching);
 };
 
 const exporter = new Export();
@@ -317,6 +320,7 @@ window.addEventListener('keydown', (e) => {
       activeTracker = null;
       overlay.closePanels();
       shareLink.hide();
+      knowledgeCard.hide(); // 固定中的知识卡不应跟到启动页
       startScreen.show();
       break;
   }

@@ -94,7 +94,7 @@ export class Overlay {
           <tr><td>滚轮</td><td>鼠标模式：连续微调形态轴，比 1 / 2 锁存更细</td></tr>
           <tr><td>G</td><td>循环切换场景（nebula→galaxy→ocean→saturn→heart→pulse）</td></tr>
           <tr><td>[ &nbsp;/&nbsp; ]</td><td>尺度轴跳站（按物理尺度从小到大切换场景）</td></tr>
-          <tr><td>K</td><td>知识卡开合 / 揭晓课堂一问答案</td></tr>
+          <tr><td>K</td><td>知识卡固定显示 / 再按收起（不会自动消失）；卡内可点「课堂一问」揭晓答案</td></tr>
           <tr><td>T</td><td>课案模式：90 秒按尺度轴顺序自动巡演</td></tr>
           <tr><td>Q</td><td>生成分享链接（扫码同屏）</td></tr>
           <tr><td>E</td><td>导出当前画面 PNG + 参数快照 JSON</td></tr>
@@ -340,6 +340,16 @@ export class Overlay {
 
   toggleHud(): void {
     this.q('[data-role="hud"]').classList.toggle('hidden');
+  }
+
+  /** 显式设置 HUD 可见性。课案模式进出时必须用它，而不是 toggle——
+   *  否则用户事先按过 H，进入课案会把隐藏的 HUD 反而翻出来。 */
+  setHudVisible(visible: boolean): void {
+    this.q('[data-role="hud"]').classList.toggle('hidden', !visible);
+  }
+
+  get hudVisible(): boolean {
+    return !this.q('[data-role="hud"]').classList.contains('hidden');
   }
 
   toggleHelp(): void {
