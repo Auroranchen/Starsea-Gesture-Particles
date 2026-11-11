@@ -4,10 +4,15 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "assets": "node scripts/copy-mediapipe-assets.mjs",
+    "predev": "npm run assets",
     "dev": "vite",
+    "prebuild": "npm run assets",
     "build": "tsc && vite build",
     "build:embed": "tsc && vite build --mode embed",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:contract": "node scripts/check-contract.mjs",
+    "check:claims": "node scripts/check-claims.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^0.10.14",

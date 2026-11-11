@@ -4,3 +4,7 @@ dist
 *.local
 .env
 .env.*
+
+# MediaPipe WASM 由 scripts/copy-mediapipe-assets.mjs 从 node_modules 复制，
+# 不重复提交；模型文件 public/mediapipe/hand_landmarker.task 需要提交。
+public/mediapipe/wasm/

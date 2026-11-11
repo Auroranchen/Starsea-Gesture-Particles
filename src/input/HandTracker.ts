@@ -4,9 +4,31 @@ import { CONFIG } from '../config';
 import { OneEuroFilter3 } from '../utils/OneEuroFilter';
 import type { HandState } from './InputManager';
 
+/**
+ * MediaPipe 资源加载策略：**本地优先，CDN 兜底**。
+ *
+ * 本地资源由 `npm run assets`（自动挂在 predev / prebuild 上）从
+ * `node_modules/@mediapipe/tasks-vision/wasm` 复制到 `public/mediapipe/wasm/`，
+ * 模型文件 `hand_landmarker.task` 随仓库提交。
+ * 这样在断网、校园内网、CDN 抖动的情况下，摄像头模式仍然可用——
+ * 教室场景不该因为网络状况而失效。
+ */
 const WASM_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm';
-const MODEL_URL =
+const MODEL_CDN =
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
+
+const LOCAL_WASM = `${import.meta.env.BASE_URL}mediapipe/wasm`;
+const LOCAL_MODEL = `${import.meta.env.BASE_URL}mediapipe/hand_landmarker.task`;
+
+/** HEAD 探测资源是否存在（不下载正文）。失败一律当作「不存在」。 */
+async function assetExists(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
 const WRIST = 0;
 const MIDDLE_MCP = 9;
@@ -37,6 +59,8 @@ export class HandTracker {
   video: HTMLVideoElement;
   landmarks: NormalizedLandmark[][] = [];
   detectionFps = 0;
+  /** 实际生效的资源来源，用于界面上如实说明「离线可用」是否成立。 */
+  assetSource: 'local' | 'cdn' | 'unknown' = 'unknown';
 
   private landmarker: HandLandmarker | null = null;
   private stream: MediaStream | null = null;
@@ -84,20 +108,44 @@ export class HandTracker {
       await tracker.video.play();
 
       const vision = await import('@mediapipe/tasks-vision');
-      const fileset = await vision.FilesetResolver.forVisionTasks(WASM_CDN);
-      try {
-        tracker.landmarker = await vision.HandLandmarker.createFromOptions(fileset, {
-          baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
-          runningMode: 'VIDEO',
-          numHands: 2,
-        });
-      } catch {
-        tracker.landmarker = await vision.HandLandmarker.createFromOptions(fileset, {
-          baseOptions: { modelAssetPath: MODEL_URL, delegate: 'CPU' },
-          runningMode: 'VIDEO',
-          numHands: 2,
-        });
+
+      // 先探测本地资源；任何一步失败都回落到 CDN。
+      const [hasLocalWasm, hasLocalModel] = await Promise.all([
+        assetExists(`${LOCAL_WASM}/vision_wasm_internal.js`),
+        assetExists(LOCAL_MODEL),
+      ]);
+      const attempts: Array<{ wasm: string; model: string; source: 'local' | 'cdn' }> = [];
+      if (hasLocalWasm && hasLocalModel) {
+        attempts.push({ wasm: LOCAL_WASM, model: LOCAL_MODEL, source: 'local' });
       }
+      attempts.push({ wasm: WASM_CDN, model: MODEL_CDN, source: 'cdn' });
+
+      let lastError: unknown = null;
+      for (const attempt of attempts) {
+        try {
+          const fileset = await vision.FilesetResolver.forVisionTasks(attempt.wasm);
+          try {
+            tracker.landmarker = await vision.HandLandmarker.createFromOptions(fileset, {
+              baseOptions: { modelAssetPath: attempt.model, delegate: 'GPU' },
+              runningMode: 'VIDEO',
+              numHands: 2,
+            });
+          } catch {
+            tracker.landmarker = await vision.HandLandmarker.createFromOptions(fileset, {
+              baseOptions: { modelAssetPath: attempt.model, delegate: 'CPU' },
+              runningMode: 'VIDEO',
+              numHands: 2,
+            });
+          }
+          tracker.assetSource = attempt.source;
+          break;
+        } catch (error) {
+          lastError = error;
+          tracker.landmarker?.close();
+          tracker.landmarker = null;
+        }
+      }
+      if (!tracker.landmarker) throw lastError ?? new Error('hand landmarker unavailable');
 
       tracker.startLoop();
       return tracker;
