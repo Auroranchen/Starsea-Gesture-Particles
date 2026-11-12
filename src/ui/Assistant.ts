@@ -11,15 +11,20 @@ import { KB, type KbEntry } from '../data/assistantKb';
  *
  * 但它确实会"想一想"：命中哪几条知识、命中哪些词、匹配分多少，都摊开显示，
  * 对应评分表里「AI 响应状态提示友好（如流式、思考可视化）」这一条。
+ *
+ * 老师还可以自己往里加知识点（＋ 按钮），存在浏览器 localStorage 里，
+ * 刷新/重开都还在；自定义条目参与同一套检索，且同分时优先于内置条目。
  */
 
 interface Hit {
   entry: KbEntry;
   score: number;
   words: string[];
+  custom: boolean;
 }
 
 const STOP = /[\s，。、？！：；,.?!:;"'“”‘’（）()【】\[\]—…·]/g;
+const STORAGE_KEY = 'starsea.kb.custom.v1';
 
 function normalize(s: string): string {
   return s.toLowerCase().replace(STOP, '');
@@ -31,14 +36,24 @@ function bigrams(s: string): string[] {
   return out;
 }
 
-/** 检索：标签命中为主、二元组重合为辅，当前场景加权。 */
-export function search(query: string, scene: SceneId, limit = 3): Hit[] {
+/** 检索：标签命中为主、二元组重合为辅，当前场景加权；自定义条目同分优先。 */
+export function search(
+  query: string,
+  scene: SceneId,
+  extra: KbEntry[] = [],
+  limit = 3,
+): Hit[] {
   const q = normalize(query);
   if (!q) return [];
   const qBi = new Set(bigrams(q));
   const hits: Hit[] = [];
 
-  for (const entry of KB) {
+  const pool: Array<{ entry: KbEntry; custom: boolean }> = [
+    ...extra.map((entry) => ({ entry, custom: true })),
+    ...KB.map((entry) => ({ entry, custom: false })),
+  ];
+
+  for (const { entry, custom } of pool) {
     let score = 0;
     const words: string[] = [];
 
@@ -59,8 +74,9 @@ export function search(query: string, scene: SceneId, limit = 3): Hit[] {
     score += Math.min(overlap, 12) * 0.28;
 
     if (entry.scene && entry.scene === scene) score += 1.3;
+    if (custom) score += 0.6;
 
-    if (score > 0.6) hits.push({ entry, score, words });
+    if (score > 0.6) hits.push({ entry, score, words, custom });
   }
 
   hits.sort((a, b) => b.score - a.score);
@@ -71,13 +87,19 @@ export class Assistant {
   readonly element: HTMLElement;
   private open = false;
   private scene: SceneId;
+  private custom: KbEntry[] = [];
 
   constructor(scene: SceneId) {
     this.scene = scene;
+    this.custom = this.loadCustom();
     this.element = document.createElement('section');
     this.element.className = 'assistant collapsed';
     this.element.setAttribute('aria-label', '课堂助手');
     this.renderShell();
+  }
+
+  get totalEntries(): number {
+    return KB.length + this.custom.length;
   }
 
   setScene(scene: SceneId): void {
@@ -102,6 +124,40 @@ export class Assistant {
     this.element.classList.remove('open');
   }
 
+  // ── 自定义知识点的持久化 ──────────────────────────────────
+  private loadCustom(): KbEntry[] {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter((e): e is KbEntry =>
+          !!e && typeof e === 'object' &&
+          typeof (e as KbEntry).q === 'string' &&
+          typeof (e as KbEntry).a === 'string',
+        )
+        .map((e) => ({
+          id: typeof e.id === 'string' ? e.id : `mine-${Date.now()}`,
+          q: e.q,
+          a: e.a,
+          tags: Array.isArray(e.tags) ? e.tags.filter((t) => typeof t === 'string') : [],
+          scene: e.scene,
+        }));
+    } catch {
+      return [];
+    }
+  }
+
+  private saveCustom(): void {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.custom));
+    } catch {
+      /* 隐私模式或配额满：静默失败，本次会话内仍可用 */
+    }
+  }
+
+  // ── 界面 ──────────────────────────────────────────────────
   private renderShell(): void {
     this.element.innerHTML = `
       <button class="asst-bubble" type="button" aria-label="打开课堂助手">
@@ -112,11 +168,43 @@ export class Assistant {
         <header class="asst-head">
           <div class="asst-title">
             课堂助手
-            <span class="asst-badge">本地知识库 · 不联网</span>
+            <span class="asst-badge" data-role="badge">本地知识库 · 不联网</span>
           </div>
-          <button class="asst-close" type="button" aria-label="收起助手">✕</button>
+          <div class="asst-actions">
+            <button class="asst-add" type="button" title="添加知识点">＋</button>
+            <button class="asst-close" type="button" aria-label="收起助手">✕</button>
+          </div>
         </header>
-        <div class="asst-log" role="log" aria-live="polite"></div>
+
+        <div class="asst-body">
+          <div class="asst-log" role="log" aria-live="polite"></div>
+
+          <form class="asst-form hidden">
+            <div class="asst-form-title">添加知识点</div>
+            <input class="asst-f-q" type="text" placeholder="问题 / 知识点名称（必填）" autocomplete="off" />
+            <textarea class="asst-f-a" rows="3" placeholder="答案（必填）"></textarea>
+            <input class="asst-f-k" type="text" placeholder="关键词，逗号分隔（可选）" autocomplete="off" />
+            <div class="asst-form-bottom">
+              <select class="asst-f-scene" aria-label="关联场景">
+                <option value="">通用</option>
+                <option value="nebula">星云</option>
+                <option value="galaxy">星系</option>
+                <option value="ocean">粒子地球</option>
+                <option value="saturn">土星</option>
+                <option value="heart">心跳</option>
+                <option value="pulse">离子脉冲</option>
+              </select>
+              <div class="asst-form-btns">
+                <button class="asst-save" type="submit">保存</button>
+                <button class="asst-cancel" type="button">取消</button>
+              </div>
+            </div>
+            <p class="asst-form-hint">保存在本机浏览器里，刷新后仍在；不会上传。</p>
+          </form>
+
+          <div class="asst-mine hidden"></div>
+        </div>
+
         <form class="asst-inputrow">
           <input class="asst-input" type="text" autocomplete="off"
                  placeholder="问点什么，例如：极光是怎么形成的" aria-label="输入问题" />
@@ -129,6 +217,20 @@ export class Assistant {
       ?.addEventListener('click', () => this.show());
     this.element.querySelector<HTMLButtonElement>('.asst-close')
       ?.addEventListener('click', () => this.close());
+
+    this.element.querySelector<HTMLButtonElement>('.asst-add')
+      ?.addEventListener('click', () => this.toggleForm(true));
+    this.element.querySelector<HTMLButtonElement>('.asst-cancel')
+      ?.addEventListener('click', () => this.toggleForm(false));
+    this.element.querySelector<HTMLFormElement>('.asst-form')
+      ?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.submitCustom();
+      });
+
+    this.element.querySelector<HTMLElement>('.asst-badge')
+      ?.addEventListener('click', () => this.toggleMine());
+
     this.element.querySelector<HTMLFormElement>('.asst-inputrow')
       ?.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -138,6 +240,139 @@ export class Assistant {
         if (input) input.value = '';
         this.ask(value);
       });
+
+    this.refreshBadge();
+    this.renderMine();
+  }
+
+  private refreshBadge(): void {
+    const badge = this.element.querySelector<HTMLElement>('.asst-badge');
+    if (!badge) return;
+    badge.textContent = this.custom.length
+      ? `本地知识库 ${this.totalEntries} 条 · 自建 ${this.custom.length}`
+      : '本地知识库 · 不联网';
+  }
+
+  private toggleForm(showIt: boolean): void {
+    const form = this.element.querySelector<HTMLElement>('.asst-form');
+    if (!form) return;
+    form.classList.toggle('hidden', !showIt);
+    if (showIt) {
+      this.element.querySelector<HTMLElement>('.asst-mine')?.classList.add('hidden');
+      this.element.querySelector<HTMLInputElement>('.asst-f-q')?.focus();
+    }
+  }
+
+  private toggleMine(): void {
+    const mine = this.element.querySelector<HTMLElement>('.asst-mine');
+    if (!mine) return;
+    const willShow = mine.classList.contains('hidden');
+    mine.classList.toggle('hidden', !willShow);
+    if (willShow) {
+      this.toggleForm(false);
+      this.renderMine();
+    }
+  }
+
+  private submitCustom(): void {
+    const qEl = this.element.querySelector<HTMLInputElement>('.asst-f-q');
+    const aEl = this.element.querySelector<HTMLTextAreaElement>('.asst-f-a');
+    const kEl = this.element.querySelector<HTMLInputElement>('.asst-f-k');
+    const sEl = this.element.querySelector<HTMLSelectElement>('.asst-f-scene');
+
+    const q = qEl?.value.trim() ?? '';
+    const a = aEl?.value.trim() ?? '';
+    if (!q || !a) {
+      this.push('问题和答案都要填，才能记住。', 'bot');
+      return;
+    }
+
+    const tags = (kEl?.value ?? '')
+      .split(/[,，、;；\s]+/)
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const scene = (sEl?.value || undefined) as SceneId | undefined;
+
+    const entry: KbEntry = {
+      id: `mine-${Date.now()}`,
+      q,
+      a,
+      tags: [q, ...tags],
+      scene,
+    };
+
+    this.custom.unshift(entry);
+    this.saveCustom();
+    this.refreshBadge();
+    this.renderMine();
+
+    if (qEl) qEl.value = '';
+    if (aEl) aEl.value = '';
+    if (kEl) kEl.value = '';
+    if (sEl) sEl.value = '';
+    this.toggleForm(false);
+
+    this.push(
+      `已记住：「${q}」${scene ? `（关联场景：${scene}）` : ''}。现在问它就能答，刷新页面也不会丢。`,
+      'bot',
+    );
+  }
+
+  private renderMine(): void {
+    const box = this.element.querySelector<HTMLElement>('.asst-mine');
+    if (!box) return;
+
+    if (this.custom.length === 0) {
+      box.innerHTML = `<p class="asst-hint">还没有自建知识点。点右上角 ＋ 添加，例如「红树林为什么长在潮间带」。</p>`;
+      return;
+    }
+
+    box.innerHTML = `
+      <div class="asst-mine-head">
+        <span>我添加的知识点（${this.custom.length}）</span>
+        <button class="asst-export" type="button">导出 JSON</button>
+      </div>
+      <ul class="asst-mine-list">
+        ${this.custom
+          .map(
+            (e) => `<li>
+              <span class="asst-mine-q">${e.scene ? `[${e.scene}] ` : ''}${e.q}</span>
+              <button class="asst-del" type="button" data-id="${e.id}" title="删除">✕</button>
+            </li>`,
+          )
+          .join('')}
+      </ul>
+    `;
+
+    box.querySelectorAll<HTMLButtonElement>('.asst-del').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        this.custom = this.custom.filter((e) => e.id !== id);
+        this.saveCustom();
+        this.refreshBadge();
+        this.renderMine();
+      });
+    });
+
+    box.querySelector<HTMLButtonElement>('.asst-export')
+      ?.addEventListener('click', () => this.exportCustom());
+  }
+
+  private exportCustom(): void {
+    try {
+      const blob = new Blob([JSON.stringify(this.custom, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `starsea-知识库-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      this.push('已导出为 JSON，可以拷到别的机器上再手工添加。', 'bot');
+    } catch {
+      this.push('导出失败，浏览器可能限制了下载。', 'bot');
+    }
   }
 
   private log(): HTMLElement {
@@ -154,9 +389,10 @@ export class Assistant {
 
   private greet(): void {
     this.push(
-      `我是课堂助手。回答来自内置知识库（${KB.length} 条），**按关键词检索**，不调用大模型——` +
+      `我是课堂助手。回答来自内置知识库（${this.totalEntries} 条），**按关键词检索**，不调用大模型——` +
         `所以断网可用、答案固定，也不会编造数字。<br>` +
-        `可以问场景知识、操作方式、技术实现，或者让我给点课堂建议。`,
+        `可以直接问场景知识、操作方式、技术实现；也可以点右上角 <b>＋</b> 把你自己准备的知识点加进来，` +
+        `存在本机、刷新不丢。`,
       'bot',
     );
     this.suggest();
@@ -183,13 +419,16 @@ export class Assistant {
 
   ask(question: string): void {
     this.push(question, 'user');
-    const hits = search(question, this.scene);
+    const hits = search(question, this.scene, this.custom);
 
-    if (hits.length === 0 || hits[0].score < 2) {
+    // 阈值 2.8：实测真命中普遍在 3.4 以上、无关提问在 1.9 以下；
+    // 落在中间就如实说"答不上来"，并且引导老师用 ＋ 把这条知识教进来。
+    if (hits.length === 0 || hits[0].score < 2.8) {
       this.push(
-        `这个我答不上来——内置知识库只有 ${KB.length} 条，` +
+        `这个我答不上来——内置知识库有 ${KB.length} 条` +
+          `${this.custom.length ? `，加上你添加的 ${this.custom.length} 条` : ''}，` +
           `覆盖操作、六个场景、技术实现、项目背景和课堂建议。` +
-          `换个说法，或者直接问"这个场景在讲什么"。`,
+          `换个说法，或者点右上角 <b>＋</b> 把这条知识教给我。`,
         'bot',
       );
       return;
@@ -204,7 +443,7 @@ export class Assistant {
       .map((h) => {
         const pct = Math.min(100, Math.round((h.score / best.score) * 100));
         const words = h.words.length ? h.words.slice(0, 3).join('、') : '语义相近';
-        return `<li><span class="asst-trace-q">${h.entry.q}</span>
+        return `<li><span class="asst-trace-q">${h.custom ? '★ ' : ''}${h.entry.q}</span>
                   <span class="asst-trace-bar"><i style="width:${pct}%"></i></span>
                   <span class="asst-trace-word">${words}</span></li>`;
       })
