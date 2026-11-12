@@ -1,5 +1,6 @@
 import type { SceneId } from '../config';
 import { HS_POINTS } from './hsPoints';
+import { SCENE_PROMPTS } from './scenePrompts';
 
 /**
  * 课堂助手的本地知识库。
@@ -561,5 +562,14 @@ export const KB: KbEntry[] = [
     tags: [p.title, ...p.aliases],
     q: `什么是${p.title}？`,
     a: `${p.text}　（${p.subject} · ${p.chapter}）`,
+  })),
+
+  // ── 场景提问标签（由 scenePrompts.ts 自动生成）──────────────
+  ...SCENE_PROMPTS.map((p, i) => ({
+    id: `chip-${p.scene}-${i}`,
+    scene: p.scene,
+    tags: [p.q.replace(/[？?]/g, ''), ...p.keywords],
+    q: p.q,
+    a: p.a,
   })),
 ];

@@ -1023,6 +1023,31 @@ input[type='range']:disabled { opacity: 0.35; }
   line-height: 1.65;
 }
 
+/* 问问助手：可点击的提问标签，点了直接抛给右侧课堂助手 */
+.lesson-prompt-label {
+  margin: 10px 0 5px;
+  color: var(--ink-dim);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+.lesson-prompts { display: flex; flex-wrap: wrap; gap: 5px; }
+.lesson-prompt {
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.lesson-prompt:hover {
+  color: var(--accent);
+  border-color: rgba(255, 208, 113, 0.45);
+  background: rgba(255, 208, 113, 0.08);
+}
+
 /* 对应高中知识点：学科色块 + 名称 + 一句话 + 章节 */
 .lesson-hs-label {
   margin: 12px 0 5px;

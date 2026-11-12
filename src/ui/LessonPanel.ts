@@ -2,16 +2,22 @@ import type { SceneId } from '../config';
 import { SCALE_AXIS } from '../config';
 import { LESSONS } from '../data/lessons';
 import { hsPointsForScene } from '../data/hsPoints';
+import { promptsForScene } from '../data/scenePrompts';
 
 /**
  * LessonPanel — 左侧常驻的教学说明。
  *
- * 与 K 知识卡（右下角悬浮、按 I 开合）分工不同：
+ * 与 I 知识卡（左下角悬浮、按 I 开合）分工不同：
  * 这块是老师讲课时的"讲义"，默认展开、跟着场景走；收起后留一个竖排小标签，
  * 点它或按 K 能重新拉出来，不用记第二个键。
+ *
+ * 底部的「问问助手」小标签点一下会把这句话原样抛给课堂助手，
+ * 标签与助手的知识库同源（scenePrompts.ts），保证点了必有答案。
  */
 export class LessonPanel {
   readonly element: HTMLElement;
+  /** 点提问标签时回调，由 main.ts 接到课堂助手上 */
+  onAsk: ((question: string) => void) | null = null;
   private collapsed = false;
   private scene: SceneId;
 
@@ -47,6 +53,17 @@ export class LessonPanel {
     const lesson = LESSONS[this.scene];
     const station = SCALE_AXIS.find((a) => a.scene === this.scene);
     const hs = hsPointsForScene(this.scene);
+    const prompts = promptsForScene(this.scene);
+
+    const promptHtml = prompts.length
+      ? `
+        <div class="lesson-prompt-label">问问助手</div>
+        <div class="lesson-prompts">
+          ${prompts
+            .map((p) => `<button class="lesson-prompt" type="button">${p.q}</button>`)
+            .join('')}
+        </div>`
+      : '';
 
     const hsHtml = hs.length
       ? `
@@ -82,9 +99,17 @@ export class LessonPanel {
           ${lesson.points.map((p) => `<li>${p}</li>`).join('')}
         </ul>
         <p class="lesson-gesture">${lesson.gesture}</p>
+        ${promptHtml}
         ${hsHtml}
       </div>
     `;
+
+    this.element.querySelectorAll<HTMLButtonElement>('.lesson-prompt')
+      .forEach((btn) => {
+        btn.addEventListener('click', () => {
+          this.onAsk?.(btn.textContent ?? '');
+        });
+      });
 
     this.element.querySelector<HTMLButtonElement>('.lesson-collapse')
       ?.addEventListener('click', () => {

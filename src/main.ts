@@ -171,6 +171,11 @@ app.appendChild(lessonPanel.element);
 
 const assistant = new Assistant(currentScene);
 app.appendChild(assistant.element);
+// 教学说明里的「问问助手」标签：点一下就把这句话抛给助手
+lessonPanel.onAsk = (question) => {
+  assistant.show();
+  assistant.ask(question);
+};
 
 const teachingMode = new TeachingMode();
 app.appendChild(teachingMode.subtitleEl);
