@@ -2,7 +2,7 @@
  * KnowledgeCard.ts — 六张知识卡（P0）
  *
  * 每个场景：概念、你正在改变的物理量、尺度与主导力、现实对照、课堂一问（答案默认折叠）。
- * 交互：K 键**固定显示 / 再按收起**（不会自动消失）；未固定时切场景会自动淡入 3 秒后淡出。
+ * 交互：I 键**固定显示 / 再按收起**（不会自动消失）；未固定时切场景会自动淡入 3 秒后淡出。
  * 不遮挡 HUD（左下角）。
  *
  * 文案纪律：卡里出现的所有数值均来自 config.ts 的实际值，核对注释写在每条旁边。
@@ -28,6 +28,10 @@ export class KnowledgeCard {
     if (!data) return;
     this.element.innerHTML = this.buildCard(scene, data);
     this.element.classList.remove('hidden');
+    // CSS 里 .knowledge-card 的基准 opacity 是 0，必须显式加 .visible 才会显现；
+    // 进场动画（kc-in）只负责 0.25 秒的入场，动画结束后回落到 .visible 的 opacity:1。
+    this.element.classList.remove('fading');
+    this.element.classList.add('visible');
 
     // 绑定折叠/展开答案
     const btn = this.element.querySelector<HTMLButtonElement>('.kc-reveal-btn');
@@ -68,6 +72,7 @@ export class KnowledgeCard {
   hide(): void {
     this.pinned = false;
     this.element.classList.add('hidden');
+    this.element.classList.remove('visible');
     this.element.classList.remove('fading');
     this.clearTimer();
   }
