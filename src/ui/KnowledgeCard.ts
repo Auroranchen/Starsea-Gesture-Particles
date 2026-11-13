@@ -52,13 +52,17 @@ export class KnowledgeCard {
     this.showWithAutoHide(scene);
   }
 
-  /** K 键：按一下固定显示，再按一下收起。 */
+  /** I 键：按一下固定显示，再按一下收起。 */
   toggle(scene: SceneId): void {
     if (this.pinned) {
       this.unpin();
     } else {
       this.pin(scene);
     }
+  }
+
+  get isPinned(): boolean {
+    return this.pinned;
   }
 
   /** 固定显示：不自动消失；此后切场景只换内容。 */

@@ -140,7 +140,8 @@ function switchScene(id: SceneId): void {
   scaleAxis.setScene(id);
   lessonPanel.setScene(id);
   assistant.setScene(id);
-  knowledgeCard.showWithAutoHide(id);
+  // 教学说明展开时不再自动弹知识卡：左侧同一时刻只放一块面板
+  if (lessonPanel.isCollapsed) knowledgeCard.showWithAutoHide(id);
 }
 
 const angularVel = new THREE.Vector2(0, CONFIG.autoSpin);
@@ -295,12 +296,16 @@ window.addEventListener('keydown', (e) => {
       scaleAxis.next();
       break;
     case 'k':
+      // 左侧同一时刻只放一块面板：展开讲义前先收起知识卡
+      if (lessonPanel.isCollapsed) knowledgeCard.hide();
       lessonPanel.toggle();
       break;
     case 'a':
       assistant.toggle();
       break;
     case 'i':
+      // 反之，固定知识卡前先收起讲义，避免两块面板叠在左下角
+      if (!knowledgeCard.isPinned) lessonPanel.collapse();
       knowledgeCard.toggle(currentScene);
       break;    case 't':
       teachingMode.toggle({ scene: currentScene, dial: stateMachine.dial });

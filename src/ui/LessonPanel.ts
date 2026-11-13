@@ -41,6 +41,16 @@ export class LessonPanel {
     this.element.classList.toggle('collapsed', this.collapsed);
   }
 
+  /** 左侧同一时刻只放一块面板：显示知识卡前先收起讲义，避免两块叠在一起。 */
+  collapse(): void {
+    this.collapsed = true;
+    this.element.classList.add('collapsed');
+  }
+
+  get isCollapsed(): boolean {
+    return this.collapsed;
+  }
+
   hide(): void {
     this.element.classList.add('hidden');
   }
